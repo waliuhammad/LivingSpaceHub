@@ -1,0 +1,24 @@
+import { Outlet, useLocation } from 'react-router-dom';
+import Header from './Header';
+import Footer from './Footer';
+import CustomCursor from './CustomCursor';
+import ScrollToTop from './ScrollToTop';
+import { AnimatePresence } from 'framer-motion';
+
+export default function Layout() {
+  const location = useLocation();
+  
+  return (
+    <div className="flex flex-col min-h-screen">
+      <CustomCursor />
+      <ScrollToTop />
+      <Header />
+      <AnimatePresence mode="wait">
+        <main key={location.pathname} className="flex-1">
+          <Outlet />
+        </main>
+      </AnimatePresence>
+      <Footer />
+    </div>
+  );
+}

@@ -1,0 +1,378 @@
+[
+  {
+    "id": 168,
+    "name": "3D Welcome to Our Home Family Wooden Wall",
+    "price": 100,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/14c0199c5bf2758af3d050c4ecd20db6.jpgstyle=width:1600px;height:2400px;display:inline;vertical-align:middle_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 174,
+    "name": "Customize clocks 3D Wooden Wall Art",
+    "price": 100,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/9323d71af0b573cee9c2621bd27aa912.jpg_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 244,
+    "name": "World Map Wall Clock",
+    "price": 150,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/e4ea83f2f186ff2fbf5bfd92b6d5f249.jpg_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 182,
+    "name": "Ayatal Kursi Wall Art | Wooden Wall Hanging",
+    "price": 270,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/db6702a867ffac0d087b87471b99b7a5.jpg_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 4,
+    "name": "Ceramic Vase Set",
+    "price": 400,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/29e4f5310331a25ad7397464157bd471.jpg_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 3,
+    "name": "Brushed Brass Office Lamp",
+    "price": 659,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://media.istockphoto.com/id/1423568689/photo/stylish-lamp-clock-and-books-on-wooden-cabinet-indoors-interior-design.jpg"
+  },
+  {
+    "id": 307,
+    "name": "Digital Printed Cotton Cushion Covers without Filling",
+    "price": 900,
+    "currency": "Rs.",
+    "category": "bedroom",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/128c608a80d0d70152bbadd3ed95f6cb.png_2200x2200q80.png_.webp"
+  },
+  {
+    "id": 191,
+    "name": "Round Wood Stacking Coffee Side Accent Tables",
+    "price": 999,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/032ab0760cf8b6816d79ba1c2f521893.jpg_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 197,
+    "name": "Shoe Rack Organizer",
+    "price": 999,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/92286968f321a90c21fe4895fe79d50c.jpg_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 275,
+    "name": "Fluffy Rug Sheepskin Soft Shaggy Faux",
+    "price": 1000,
+    "currency": "Rs.",
+    "category": "bedroom",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/e1400520a55a062787267af2b21719ba.jpg_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 333,
+    "name": "Golden Floral Crystal Ball Night Lamp",
+    "price": 1100,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/9ce6cc0ae7a315051561cd8a7434af7d.jpg_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 279,
+    "name": "Wooden Floor Lamp \u2013 Modern Tall Standing",
+    "price": 1200,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/89b04e13f967e58293ffd1203497563e.png_2200x2200q80.png_.webp"
+  },
+  {
+    "id": 193,
+    "name": "Coffee table,Side table,Stool",
+    "price": 1599,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://img.drz.lazcdn.com/static/pk/p/8832ec5b07a734605ebea7c6d352a191.jpg_2200x2200q80.jpg_.webp"
+  },
+  {
+    "id": 59,
+    "name": "LED Fairy Lights",
+    "price": 2000,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://images.unsplash.com/photo-1511461744085-90a4d1c66be3"
+  },
+  {
+    "id": 95,
+    "name": "Pillow Set",
+    "price": 2000,
+    "currency": "Rs.",
+    "category": "bedroom",
+    "image": "https://plus.unsplash.com/premium_photo-1681760550122-772c6b3a5680"
+  },
+  {
+    "id": 129,
+    "name": "LED Fairy Lights",
+    "price": 2000,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://images.unsplash.com/photo-1511461744085-90a4d1c66be3"
+  },
+  {
+    "id": 34,
+    "name": "Bedsheet Set Cotton",
+    "price": 2500,
+    "currency": "Rs.",
+    "category": "bedroom",
+    "image": "https://plus.unsplash.com/premium_photo-1670869816769-c64fbc7b9c4c"
+  },
+  {
+    "id": 42,
+    "name": "LED Strip Light",
+    "price": 2500,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://plus.unsplash.com/premium_photo-1681400751087-2340425a65ae"
+  },
+  {
+    "id": 57,
+    "name": "Decor Candle Set",
+    "price": 2500,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://images.unsplash.com/photo-1603905179139-db12ab535ca9"
+  },
+  {
+    "id": 83,
+    "name": "Decor Plant Pot",
+    "price": 2500,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://images.unsplash.com/photo-1582131503261-fca1d1c0589f"
+  },
+  {
+    "id": 94,
+    "name": "Bedsheet Set",
+    "price": 2500,
+    "currency": "Rs.",
+    "category": "bedroom",
+    "image": "https://plus.unsplash.com/premium_photo-1705700604996-903105833f66"
+  },
+  {
+    "id": 102,
+    "name": "LED Strip Light",
+    "price": 2500,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://plus.unsplash.com/premium_photo-1681400751087-2340425a65ae"
+  },
+  {
+    "id": 127,
+    "name": "Decor Candle Set",
+    "price": 2500,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://images.unsplash.com/photo-1603905179139-db12ab535ca9"
+  },
+  {
+    "id": 5,
+    "name": "Artisan Coffee Table",
+    "price": 2635,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://images.unsplash.com/photo-1758639444271-0b659db2c2f4"
+  },
+  {
+    "id": 47,
+    "name": "Desk Lamp LED",
+    "price": 3000,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://images.unsplash.com/photo-1585597647877-6eaa01bf9a05"
+  },
+  {
+    "id": 56,
+    "name": "Artificial Plant Indoor",
+    "price": 3000,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://images.unsplash.com/photo-1609852665646-993d36a8ecea"
+  },
+  {
+    "id": 60,
+    "name": "Photo Frame Set",
+    "price": 3000,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://images.unsplash.com/photo-1574514120529-364d014b9a0a"
+  },
+  {
+    "id": 126,
+    "name": "Artificial Plant",
+    "price": 3000,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb"
+  },
+  {
+    "id": 130,
+    "name": "Photo Frames",
+    "price": 3000,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://images.unsplash.com/photo-1543487945-139a97f387d5"
+  },
+  {
+    "id": 54,
+    "name": "Wall Art Frame",
+    "price": 3500,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://images.unsplash.com/photo-1646932537021-464ea1c6cb74"
+  },
+  {
+    "id": 48,
+    "name": "Laptop Stand Metal",
+    "price": 4000,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://images.unsplash.com/photo-1707651385176-8c7492596164"
+  },
+  {
+    "id": 61,
+    "name": "Table Lamp Decor",
+    "price": 4000,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://images.unsplash.com/photo-1667312939978-64cf31718a6e"
+  },
+  {
+    "id": 113,
+    "name": "Laptop Stand",
+    "price": 4000,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://images.unsplash.com/photo-1623251606108-512c7c4a3507"
+  },
+  {
+    "id": 131,
+    "name": "Table Lamp Decor",
+    "price": 4000,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://images.unsplash.com/photo-1667312939978-64cf31718a6e"
+  },
+  {
+    "id": 77,
+    "name": "LED Wall Lights",
+    "price": 4500,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://plus.unsplash.com/premium_photo-1684182360671-5c55c2cacc87"
+  },
+  {
+    "id": 107,
+    "name": "Wall Lamp",
+    "price": 4500,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://plus.unsplash.com/premium_photo-1668005190411-1042cd38522e"
+  },
+  {
+    "id": 18,
+    "name": "Decor Vase Set",
+    "price": 5000,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://plus.unsplash.com/premium_photo-1682539426477-a3947f3ca98b"
+  },
+  {
+    "id": 55,
+    "name": "Flower Vase Ceramic",
+    "price": 5000,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://plus.unsplash.com/premium_photo-1677094766116-aa0f8742d36b"
+  },
+  {
+    "id": 120,
+    "name": "Monitor Stand",
+    "price": 5000,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://plus.unsplash.com/premium_photo-1681816189679-fa02d1acd1de"
+  },
+  {
+    "id": 85,
+    "name": "Wall Art Canvas",
+    "price": 5200,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://images.unsplash.com/photo-1638430323177-8cb2d1febb0c"
+  },
+  {
+    "id": 24,
+    "name": "Glass Side Table",
+    "price": 6000,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://plus.unsplash.com/premium_photo-1681344630018-2cbb60ea7702"
+  },
+  {
+    "id": 63,
+    "name": "Wood Sculpture Art",
+    "price": 6000,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://plus.unsplash.com/premium_photo-1668474107210-c2c1034a3e15"
+  },
+  {
+    "id": 79,
+    "name": "Glass Side Table",
+    "price": 6000,
+    "currency": "Rs.",
+    "category": "living",
+    "image": "https://plus.unsplash.com/premium_photo-1681344630018-2cbb60ea7702"
+  },
+  {
+    "id": 122,
+    "name": "LED Panel Light",
+    "price": 6000,
+    "currency": "Rs.",
+    "category": "office",
+    "image": "https://images.unsplash.com/photo-1584259432824-3d124136ea4c"
+  },
+  {
+    "id": 20,
+    "name": "Wall Mirror Round",
+    "price": 7000,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://images.unsplash.com/photo-1583078603507-65d00910f610"
+  },
+  {
+    "id": 38,
+    "name": "Curtain Blackout",
+    "price": 7000,
+    "currency": "Rs.",
+    "category": "bedroom",
+    "image": "https://images.unsplash.com/photo-1514189996811-1c7430bc6740"
+  },
+  {
+    "id": 58,
+    "name": "Antique Wall Clock",
+    "price": 7000,
+    "currency": "Rs.",
+    "category": "decor",
+    "image": "https://images.unsplash.com/photo-1558603655-491ecfa8324f"
+  }
+]
