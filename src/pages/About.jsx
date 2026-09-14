@@ -1,13 +1,21 @@
-
 import React from 'react';
 import aboutImg from '../assets/about.png';
 import PageTransition, { itemVariants } from '../components/PageTransition';
 import { motion } from 'framer-motion';
 
+// Fade + slide-up reveal, used for every scroll-triggered element on this page
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (delay = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: 'easeOut', delay },
+  }),
+};
+
 const About = () => {
   return (
     <PageTransition className="bg-primary-50 min-h-screen flex flex-col font-sans text-neutral-900">
-
 
       {/* Main Content */}
       <main className="flex-grow">
@@ -16,7 +24,13 @@ const About = () => {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
 
-              <div className="reveal active lg:pr-10 px-6 flex flex-col justify-center h-full">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: false, amount: 0.3 }}
+                variants={fadeUp}
+                className="lg:pr-10 px-6 flex flex-col justify-center h-full"
+              >
                 <h1 className="text-4xl md:text-[2.75rem] font-serif font-bold mb-6 text-[#1a1a1a] leading-tight">
                   Our Philosophy
                 </h1>
@@ -41,15 +55,22 @@ const About = () => {
                     </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="reveal active mt-4 lg:mt-0">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: false, amount: 0.3 }}
+                variants={fadeUp}
+                custom={0.15}
+                className="mt-4 lg:mt-0"
+              >
                 <img
                   src={aboutImg}
                   className="w-full h-auto rounded-2xl shadow-xl object-cover max-h-[700px]"
                   alt="Living Space Hub - Our Philosophy"
                 />
-              </div>
+              </motion.div>
             </div>
           </div>
         </motion.section>
@@ -57,39 +78,63 @@ const About = () => {
         {/* Our Journey Section */}
         <motion.section variants={itemVariants} className="py-12 md:py-24 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12 reveal active">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: false, amount: 0.3 }}
+              variants={fadeUp}
+              className="text-center mb-12"
+            >
               <h2 className="text-2xl md:text-4xl font-display font-bold text-primary-950">
                 Our Journey
               </h2>
-            </div>
+            </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="reveal active">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: false, amount: 0.3 }}
+                variants={fadeUp}
+                custom={0}
+              >
                 <div className="p-6 border-l-4 border-[#0d6efd] bg-neutral-50 h-full shadow-sm rounded-r-lg">
                   <h5 className="text-base font-bold text-primary-950 mb-2">2024</h5>
                   <p className="text-sm text-neutral-600 leading-relaxed">
                     Launched as a digital gallery in London, showcasing local ceramic artists.
                   </p>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="reveal active">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: false, amount: 0.3 }}
+                variants={fadeUp}
+                custom={0.15}
+              >
                 <div className="p-6 border-l-4 border-[#0d6efd] bg-neutral-50 h-full shadow-sm rounded-r-lg">
                   <h5 className="text-base font-bold text-primary-950 mb-2">2025</h5>
                   <p className="text-sm text-neutral-600 leading-relaxed">
                     Expanded our collection to include premium furniture and sustainable textiles.
                   </p>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="reveal active">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: false, amount: 0.3 }}
+                variants={fadeUp}
+                custom={0.3}
+              >
                 <div className="p-6 border-l-4 border-[#0d6efd] bg-neutral-50 h-full shadow-sm rounded-r-lg">
                   <h5 className="text-base font-bold text-primary-950 mb-2">2026</h5>
                   <p className="text-sm text-neutral-600 leading-relaxed">
                     Now serving design enthusiasts globally with shipping to over 50 countries.
                   </p>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </motion.section>

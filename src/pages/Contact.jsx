@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapPin, Mail, Phone, CheckCircle2 } from 'lucide-react';
 import PageTransition, { itemVariants } from '../components/PageTransition';
 import { motion } from 'framer-motion';
+import PromoBanner from '../components/PromoBanner';
 
 const CONTACT_ITEMS = [
   {
@@ -132,6 +133,7 @@ export default function Contact() {
           </motion.div>
         </div>
       </div>
+
     </PageTransition>
   );
 }

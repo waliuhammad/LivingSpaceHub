@@ -44,8 +44,7 @@ export default function Hero() {
   const slide = slides[current];
 
   return (
-    <section className="relative h-screen min-h-[600px] w-full overflow-hidden bg-black text-white">
-      {/* Background Image Carousel with Ken Burns zoom */}
+    <section className="relative h-[85vh] min-h-[550px] w-full overflow-hidden bg-black text-white">
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
@@ -59,37 +58,38 @@ export default function Hero() {
             className="w-full h-full bg-cover bg-center animate-kenburns"
             style={{ backgroundImage: `url('${slide.image}')` }}
           />
-          {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/70" />
         </motion.div>
       </AnimatePresence>
 
-      {/* Hero Glassmorphism Content Box */}
-      <div className="relative z-10 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center text-center">
+      <div className="relative z-10 h-full max-w-[1600px] mx-auto px-4 sm:px-8 flex items-center justify-center text-center">
         <motion.div
           key={`content-${current}`}
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="w-full max-w-4xl px-8 py-14 sm:px-16 sm:py-20 rounded-[30px] border shadow-2xl"
+          transition={{ duration: 1.2, delay: 0.5, ease: [0.24, 0.6, 0.35, 1] }}
+          className="w-full max-w-[900px] px-[40px] py-[24px] sm:py-[28px] rounded-[30px] flex flex-col items-center justify-center relative z-10 text-center text-white"
           style={{
-            background: 'rgba(26, 26, 26, 0.35)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            borderColor: 'rgba(255, 255, 255, 0.15)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(15px)',
+            WebkitBackdropFilter: 'blur(15px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           }}
         >
-          <span className="inline-block text-sm sm:text-base uppercase tracking-[0.3em] text-[#D4A373] font-semibold mb-5">
+          <span className="inline-block text-sm sm:text-base uppercase tracking-[0.3em] text-stone-200 font-semibold mb-3">
             {slide.subtitle1}
           </span>
-          <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 text-white">
+
+          <h1 className="mx-auto max-w-[1200px] font-serif text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.05] mb-4 text-white">
             {slide.title}
           </h1>
-          <p className="text-stone-200 text-sm sm:text-base uppercase tracking-[0.2em] font-light mb-10">
+
+          <p className="text-stone-200 text-sm sm:text-base lg:text-lg uppercase tracking-[0.2em] font-light mb-6">
             {slide.subtitle2}
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
             <Link
               to={slide.btn1.to}
               className="w-full sm:w-auto px-10 py-4 bg-[#5A5A40] hover:bg-white text-white hover:text-black font-bold text-sm uppercase tracking-wider rounded-full shadow-lg transition-colors duration-300 transform"
@@ -100,7 +100,7 @@ export default function Hero() {
             {slide.btn2.to ? (
               <Link
                 to={slide.btn2.to}
-                className="w-full sm:w-auto px-10 py-4 bg-transparent hover:bg-white text-white hover:text-black border border-white font-bold text-sm uppercase tracking-wider rounded-full backdrop-blur-sm transition-all duration-300 transform"
+                className="w-full sm:w-auto px-10 py-4 bg-white/15 hover:bg-white text-white hover:text-black border border-white/10 font-bold text-sm uppercase tracking-wider rounded-full backdrop-blur-sm transition-all duration-300 transform"
               >
                 {slide.btn2.label}
               </Link>
@@ -108,45 +108,43 @@ export default function Hero() {
               <a
                 href={slide.btn2.href}
                 onClick={handleScrollDown}
-                className="w-full sm:w-auto px-10 py-4 bg-transparent hover:bg-white text-white hover:text-black border border-white font-bold text-sm uppercase tracking-wider rounded-full backdrop-blur-sm transition-all duration-300 transform"
+                className="w-full sm:w-auto px-10 py-4 bg-white/15 hover:bg-white text-white hover:text-black border border-white/10 font-bold text-sm uppercase tracking-wider rounded-full backdrop-blur-sm transition-all duration-300 transform"
               >
                 {slide.btn2.label}
               </a>
             )}
           </div>
+
+          <button
+            onClick={handleScrollDown}
+            className="flex flex-col items-center gap-2 text-white/80 hover:text-white transition-colors group cursor-pointer mt-1"
+            aria-label="Scroll Down"
+          >
+            <div className="relative">
+              <div className="absolute -inset-4 bg-[#D4A373]/30 rounded-full blur-md opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity duration-300" />
+              <div className="mouse-scroll">
+                <div className="wheel" />
+              </div>
+            </div>
+            <span className="text-[10px] uppercase tracking-[0.3em] font-medium mt-1">Scroll Down</span>
+          </button>
         </motion.div>
       </div>
 
-      {/* Navigation Arrows */}
       <button
         onClick={prev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/30 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all cursor-pointer"
+        className="absolute left-6 sm:left-16 top-1/2 -translate-y-1/2 z-20 text-white/80 hover:text-white transition-colors cursor-pointer"
         aria-label="Previous Slide"
       >
-        <ChevronLeft className="w-6 h-6" />
+        <ChevronLeft className="w-8 h-8" />
       </button>
 
       <button
         onClick={next}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/30 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all cursor-pointer"
+        className="absolute right-6 sm:right-16 top-1/2 -translate-y-1/2 z-20 text-white/80 hover:text-white transition-colors cursor-pointer"
         aria-label="Next Slide"
       >
-        <ChevronRight className="w-6 h-6" />
-      </button>
-
-      {/* Scroll Down Indicator */}
-      <button
-        onClick={handleScrollDown}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 text-white/80 hover:text-white transition-colors group cursor-pointer"
-        aria-label="Scroll Down"
-      >
-        <div className="relative">
-          <div className="absolute -inset-4 bg-[#D4A373]/30 rounded-full blur-md opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity duration-300" />
-          <div className="mouse-scroll">
-            <div className="wheel" />
-          </div>
-        </div>
-        <span className="text-[10px] uppercase tracking-[0.3em] font-medium mt-1">Scroll Down</span>
+        <ChevronRight className="w-8 h-8" />
       </button>
     </section>
   );

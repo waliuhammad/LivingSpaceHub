@@ -18,6 +18,7 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const { count } = useCart();
   const location = useLocation();
+  const isHome = location.pathname === '/';
 
   useEffect(() => {
     setIsOpen(false);
@@ -32,10 +33,10 @@ export default function Header() {
   return (
     <header
       id="main-header"
-      className={`sticky top-0 z-[1000] transition-all duration-300 bg-[#fff2ed] py-[12.8px] ${
-        scrolled
-          ? 'shadow-sm border-b border-stone-200/60'
-          : 'border-b border-stone-200/40'
+      className={`${isHome ? 'fixed top-0 left-0 right-0' : 'sticky top-0'} z-[1000] transition-all duration-300 py-[12.8px] ${
+        isHome && !scrolled
+          ? 'bg-transparent border-b border-transparent'
+          : 'bg-[#fff2ed] shadow-sm border-b border-stone-200/60'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
