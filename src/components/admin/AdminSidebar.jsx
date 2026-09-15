@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { can, ROLE_LABELS } from '../../lib/roles';
 import { 
   LayoutDashboard, 
   Package, 
@@ -15,23 +16,23 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { name: 'Overview', path: '/admin', icon: LayoutDashboard },
-  { name: 'Products', path: '/admin/products', icon: Package },
-  { name: 'Categories', path: '/admin/categories', icon: Tags },
-  { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
-  { name: 'Transactions', path: '/admin/transactions', icon: CreditCard },
-  { name: 'Settings', path: '/admin/settings', icon: Settings },
-  { name: 'Messages', path: '/admin/messages', icon: MessageSquare },
-  { name: 'Team & Roles', path: '/admin/team', icon: Users },
+  { name: 'Overview', path: '/admin', icon: LayoutDashboard, allow: can.accessAdmin },
+  { name: 'Products', path: '/admin/products', icon: Package, allow: can.manageCatalog },
+  { name: 'Categories', path: '/admin/categories', icon: Tags, allow: can.manageCatalog },
+  { name: 'Orders', path: '/admin/orders', icon: ShoppingCart, allow: can.manageOrders },
+  { name: 'Transactions', path: '/admin/transactions', icon: CreditCard, allow: can.viewTransactions },
+  { name: 'Settings', path: '/admin/settings', icon: Settings, allow: can.manageSettings },
+  { name: 'Messages', path: '/admin/messages', icon: MessageSquare, allow: can.accessAdmin },
+  { name: 'Team & Roles', path: '/admin/team', icon: Users, allow: can.manageTeam },
 ];
 
 export default function AdminSidebar() {
-  const { logout } = useAuth();
+  const { logout, profile, role } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    await logout();
+    navigate('/admin-login');
   };
 
   return (
@@ -53,7 +54,7 @@ export default function AdminSidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
-        {navItems.map((item) => {
+        {navItems.filter((item) => item.allow(role)).map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
@@ -76,6 +77,10 @@ export default function AdminSidebar() {
       </nav>
 
       <div className="p-4 border-t border-gray-100 space-y-2">
+        <div className="px-4 py-2">
+          <p className="text-sm font-bold text-gray-900 truncate">{profile?.name}</p>
+          <p className="text-xs text-gray-500">{ROLE_LABELS[role]}</p>
+        </div>
         <Link 
           to="/"
           className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-colors"
@@ -91,7 +96,7 @@ export default function AdminSidebar() {
         >
           <span className="flex items-center gap-3">
             <LogOut size={18} />
-            Terminal Exit
+            Sign Out
           </span>
         </button>
       </div>

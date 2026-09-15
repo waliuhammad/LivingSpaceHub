@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { authErrorMessage, useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,23 +17,64 @@ export default function Login() {
   });
 
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const { login, signup, resetPassword, user, loading } = useAuth();
+  const redirectTo = location.state?.from || '/account';
 
   useEffect(() => {
     window.scrollTo(0, 0);
     setSubmitted(false);
+    setError('');
+    setResetSent(false);
   }, [location.pathname]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      navigate('/');
-    }, 1200);
+    setError('');
+    if (isSignUp && formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setBusy(true);
+    try {
+      if (isSignUp) {
+        await signup({ name: formData.fullName, email: formData.email, password: formData.password });
+      } else {
+        await login(formData.email, formData.password);
+      }
+      setSubmitted(true);
+      setTimeout(() => navigate(redirectTo, { replace: true }), 900);
+    } catch (err) {
+      setError(authErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
   };
+
+  const handleForgotPassword = async () => {
+    setError('');
+    if (!formData.email.trim()) {
+      setError('Enter your email address above, then click "Forgot password?" again.');
+      return;
+    }
+    try {
+      await resetPassword(formData.email);
+      setResetSent(true);
+    } catch (err) {
+      setError(authErrorMessage(err));
+    }
+  };
+
+  // Already signed in (and not in the middle of the success animation)
+  if (!loading && user && !submitted) {
+    return <Navigate to={redirectTo} replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F2ED] flex items-center justify-center py-8 px-4 font-sans">
@@ -53,7 +95,7 @@ export default function Login() {
             <h3 className="font-serif text-xl font-bold text-stone-900">
               {isSignUp ? 'Account Created!' : 'Welcome Back!'}
             </h3>
-            <p className="text-xs text-stone-500">Redirecting to homepage...</p>
+            <p className="text-xs text-stone-500">Redirecting…</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5 text-left">
@@ -102,6 +144,7 @@ export default function Login() {
                     type="password"
                     name="password"
                     required
+                    minLength={6}
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange}
@@ -140,13 +183,34 @@ export default function Login() {
               </div>
             )}
 
+            {!isSignUp && (
+              <div className="text-right -mt-2">
+                <button type="button" onClick={handleForgotPassword} className="text-xs text-[#0d6efd] hover:underline">
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
+            {resetSent && (
+              <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                Password reset email sent. Check your inbox (and spam folder).
+              </p>
+            )}
+
+            {error && (
+              <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                {error}
+              </p>
+            )}
+
             {/* Submit Button */}
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full py-3.5 bg-[#56573C] hover:bg-[#474831] text-white font-bold text-xs tracking-wider uppercase rounded-full shadow-md transition-colors cursor-pointer"
+                disabled={busy}
+                className="w-full py-3.5 bg-[#56573C] hover:bg-[#474831] text-white font-bold text-xs tracking-wider uppercase rounded-full shadow-md transition-colors cursor-pointer disabled:opacity-60"
               >
-                {isSignUp ? 'CREATE ACCOUNT' : 'SIGN IN'}
+                {busy ? 'PLEASE WAIT…' : isSignUp ? 'CREATE ACCOUNT' : 'SIGN IN'}
               </button>
             </div>
           </form>

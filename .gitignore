@@ -29,3 +29,12 @@ pnpm-debug.log*
 # Misc
 *.local
 .cache/
+# Deploy credentials & Firebase admin key
+.env.deploy
+service-account*.json
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Hostinger upload bundle
+*.zip

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   Star,
   ShoppingBag,
@@ -12,13 +12,15 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { getProductById, getRelatedProducts, formatPrice } from '../lib/products';
+import { getDescription, getRelatedProducts, formatPrice, isInStock } from '../lib/products';
+import { useStore } from '../context/StoreContext';
+import { optimizeImage } from '../lib/cloudinary';
+import PageLoader from '../components/PageLoader';
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { addItem } = useCart();
 
   const [quantity, setQuantity] = useState(1);
@@ -26,13 +28,16 @@ export default function ProductDetail() {
   const [imgError, setImgError] = useState(false);
   const [addedToast, setAddedToast] = useState(false);
 
-  const product = getProductById(id);
+  const { getProduct, products, settings, loading } = useStore();
+  const product = getProduct(id);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     setQuantity(1);
     setImgError(false);
   }, [id]);
+
+  if (loading) return <PageLoader />;
 
   if (!product) {
     return (
@@ -54,13 +59,24 @@ export default function ProductDetail() {
     );
   }
 
+  const stock = Number(product.stock) || 0;
+  const inStock = isInStock(product);
+  const description = getDescription(product);
+  const freeShippingNote =
+    !settings.shippingFee
+      ? 'On all orders'
+      : settings.freeShippingThreshold > 0
+        ? `On orders over ${formatPrice(settings.freeShippingThreshold)}`
+        : `Flat ${formatPrice(settings.shippingFee)} shipping`;
+
   const handleAddToCart = () => {
+    if (!inStock) return;
     addItem(product, quantity);
     setAddedToast(true);
     setTimeout(() => setAddedToast(false), 3000);
   };
 
-  const relatedProducts = getRelatedProducts(product.id, product.category, 4);
+  const relatedProducts = getRelatedProducts(products, product, 4);
   const fallbackImg = `https://placehold.co/800x800/EADEC9/2C362B?text=${encodeURIComponent(product.name)}`;
 
   return (
@@ -99,7 +115,7 @@ export default function ProductDetail() {
           <div className="lg:col-span-7">
             <div className="relative aspect-square rounded-3xl overflow-hidden bg-stone-100 border border-stone-200/80 shadow-md group">
               <img
-                src={imgError ? fallbackImg : product.image}
+                src={imgError || !product.image ? fallbackImg : optimizeImage(product.image, 1200)}
                 alt={product.name}
                 onError={() => setImgError(true)}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
@@ -135,15 +151,15 @@ export default function ProductDetail() {
 
               {/* Description */}
               <p className="text-stone-600 leading-relaxed text-sm sm:text-base mb-8">
-                {product.description}
+                {description}
               </p>
 
               {/* Value Badges */}
               <div className="grid grid-cols-3 gap-3 mb-8">
                 <div className="bg-white p-3 rounded-2xl border border-stone-200/80 text-center">
                   <Truck className="w-5 h-5 text-[#5A5A40] mx-auto mb-1.5" />
-                  <span className="block text-xs font-semibold text-stone-800">Free Delivery</span>
-                  <span className="block text-[10px] text-stone-400">On orders over Rs.3,000</span>
+                  <span className="block text-xs font-semibold text-stone-800">{settings.shippingFee && !settings.freeShippingThreshold ? 'Delivery' : 'Free Delivery'}</span>
+                  <span className="block text-[10px] text-stone-400">{freeShippingNote}</span>
                 </div>
                 <div className="bg-white p-3 rounded-2xl border border-stone-200/80 text-center">
                   <ShieldCheck className="w-5 h-5 text-[#5A5A40] mx-auto mb-1.5" />
@@ -161,6 +177,9 @@ export default function ProductDetail() {
               <div className="space-y-4 mb-8">
                 <label className="block text-xs uppercase tracking-wider font-semibold text-stone-500">
                   Select Quantity:
+                  <span className={`ml-2 normal-case tracking-normal ${inStock ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {inStock ? (stock <= 5 ? `Only ${stock} left` : 'In stock') : 'Out of stock'}
+                  </span>
                 </label>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center border border-stone-300 bg-white rounded-xl shadow-sm overflow-hidden">
@@ -176,7 +195,8 @@ export default function ProductDetail() {
                       {quantity}
                     </span>
                     <button
-                      onClick={() => setQuantity((q) => q + 1)}
+                      onClick={() => setQuantity((q) => Math.min(stock, q + 1))}
+                      disabled={quantity >= stock}
                       className="p-3 text-stone-600 hover:bg-stone-100 transition-colors"
                       aria-label="Increase quantity"
                     >
@@ -186,10 +206,11 @@ export default function ProductDetail() {
 
                   <button
                     onClick={handleAddToCart}
-                    className="flex-1 py-3.5 px-6 bg-[#5A5A40] hover:bg-[#484833] text-white font-semibold text-sm rounded-xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                    disabled={!inStock}
+                    className="disabled:opacity-50 disabled:pointer-events-none flex-1 py-3.5 px-6 bg-[#5A5A40] hover:bg-[#484833] text-white font-semibold text-sm rounded-xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                   >
                     <ShoppingBag className="w-4 h-4" />
-                    Add to Cart • {formatPrice(product.price * quantity)}
+                    {inStock ? `Add to Cart • ${formatPrice(product.price * quantity)}` : 'Out of Stock'}
                   </button>
                 </div>
               </div>

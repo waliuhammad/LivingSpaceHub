@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MapPin, Mail, Phone, CheckCircle2 } from 'lucide-react';
 import PageTransition, { itemVariants } from '../components/PageTransition';
 import { motion } from 'framer-motion';
-import PromoBanner from '../components/PromoBanner';
+import { sendContactMessage } from '../lib/db';
 
 const CONTACT_ITEMS = [
   {
@@ -25,10 +25,27 @@ const CONTACT_ITEMS = [
 export default function Contact() {
   const [formData, setFormData] = useState({ fullName: '', email: '', subject: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setError('');
+    setSending(true);
+    try {
+      await sendContactMessage({
+        name: formData.fullName,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      console.error('Contact form failed', err);
+      setError('Your message could not be sent. Please try again or email us directly.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -91,6 +108,7 @@ export default function Contact() {
                   required
                   name="fullName"
                   placeholder="Full Name"
+                  maxLength={100}
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   className="w-full px-4 py-3 rounded-lg border border-stone-200 bg-white font-sans text-sm text-[#1a1a1a] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#0d6efd] focus:border-[#0d6efd]"
@@ -109,6 +127,7 @@ export default function Contact() {
                   required
                   name="subject"
                   placeholder="Subject"
+                  maxLength={200}
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                   className="w-full px-4 py-3 rounded-lg border border-stone-200 bg-white font-sans text-sm text-[#1a1a1a] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#0d6efd] focus:border-[#0d6efd]"
@@ -117,16 +136,23 @@ export default function Contact() {
                   required
                   name="message"
                   placeholder="Message"
+                  maxLength={5000}
                   rows={6}
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   className="w-full px-4 py-3 rounded-lg border border-stone-200 bg-white font-sans text-sm text-[#1a1a1a] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#0d6efd] focus:border-[#0d6efd] resize-y"
                 />
+                {error && (
+                  <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                    {error}
+                  </p>
+                )}
                 <button
                   type="submit"
-                  className="mt-2 self-start bg-[#0d6efd] hover:bg-[#0b5ed7] text-white font-sans font-semibold text-sm px-7 py-3 rounded-lg transition-colors cursor-pointer shadow-xs"
+                  disabled={sending}
+                  className="disabled:opacity-60 mt-2 self-start bg-[#0d6efd] hover:bg-[#0b5ed7] text-white font-sans font-semibold text-sm px-7 py-3 rounded-lg transition-colors cursor-pointer shadow-xs"
                 >
-                  Send Message
+                  {sending ? 'Sending…' : 'Send Message'}
                 </button>
               </form>
             )}

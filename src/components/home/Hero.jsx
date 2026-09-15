@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useStore } from '../../context/StoreContext';
+import { optimizeImage } from '../../lib/cloudinary';
 
 const slides = [
   {
@@ -41,7 +43,10 @@ export default function Hero() {
     }
   };
 
-  const slide = slides[current];
+  const { settings } = useStore();
+  const slide = current === 0 && settings.heroImage
+    ? { ...slides[0], image: optimizeImage(settings.heroImage, 1920) }
+    : slides[current];
 
   return (
     <section className="relative h-[85vh] min-h-[550px] w-full overflow-hidden bg-black text-white">

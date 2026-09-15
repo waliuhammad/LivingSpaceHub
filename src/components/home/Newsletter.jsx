@@ -1,17 +1,28 @@
 import React, { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import useReveal from '../../hooks/useReveal';
+import { subscribeToNewsletter } from '../../lib/db';
 
 export default function Newsletter() {
   const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const sectionRef = useReveal();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (email.trim()) {
-      setSubmitted(true);
+    if (!email.trim()) return;
+    setError('');
+    setBusy(true);
+    try {
+      setSubmitted(await subscribeToNewsletter(email));
       setEmail('');
+    } catch (err) {
+      console.error('Newsletter signup failed', err);
+      setError('Could not subscribe right now. Please try again.');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -29,7 +40,7 @@ export default function Newsletter() {
           {submitted ? (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl max-w-md mx-auto flex items-center justify-center gap-2 text-sm font-semibold">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              Thank you for subscribing to Living Space Hub!
+              {submitted === 'exists' ? "You're already on our list — thank you!" : 'Thank you for subscribing to Living Space Hub!'}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
@@ -43,12 +54,14 @@ export default function Newsletter() {
               />
               <button
                 type="submit"
-                className="px-8 py-3.5 bg-[#5A5A40] hover:bg-[#484833] text-white font-semibold text-sm rounded-full shadow-md transition-all shrink-0 cursor-pointer"
+                disabled={busy}
+                className="disabled:opacity-60 px-8 py-3.5 bg-[#5A5A40] hover:bg-[#484833] text-white font-semibold text-sm rounded-full shadow-md transition-all shrink-0 cursor-pointer"
               >
-                Subscribe
+                {busy ? 'Subscribing…' : 'Subscribe'}
               </button>
             </form>
           )}
+          {error && <p role="alert" className="text-sm text-red-600 mt-3">{error}</p>}
         </div>
       </div>
     </section>

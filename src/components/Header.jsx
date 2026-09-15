@@ -4,19 +4,21 @@ import { Menu, X } from 'lucide-react';
 import { FaBagShopping } from 'react-icons/fa6';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
-const navLinks = [
+const baseNavLinks = [
   { label: 'Home', to: '/' },
   { label: 'Shop', to: '/shop' },
   { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
-  { label: 'Login', to: '/login' },
 ];
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { count } = useCart();
+  const { user } = useAuth();
+  const navLinks = [...baseNavLinks, user ? { label: 'Account', to: '/account' } : { label: 'Login', to: '/login' }];
   const location = useLocation();
   const isHome = location.pathname === '/';
 

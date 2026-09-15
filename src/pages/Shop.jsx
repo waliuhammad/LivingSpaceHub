@@ -3,22 +3,20 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { Search, X, SlidersHorizontal, ChevronLeft, ChevronRight, PackageX } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import SectionHeading from '../components/SectionHeading';
-import { getAllProducts, sortProducts } from '../lib/products';
+import { sortProducts } from '../lib/products';
+import { useStore } from '../context/StoreContext';
 import PageTransition, { itemVariants } from '../components/PageTransition';
 import { motion } from 'framer-motion';
 
 const ITEMS_PER_PAGE = 24;
 
-const CATEGORIES = [
-  { id: 'all', label: 'All Products' },
-  { id: 'living', label: 'Living Room' },
-  { id: 'bedroom', label: 'Bedroom' },
-  { id: 'decor', label: 'Decor & Accents' },
-  { id: 'office', label: 'Workspace' },
-];
-
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { products, categories, loading, error } = useStore();
+  const CATEGORIES = useMemo(
+    () => [{ id: 'all', label: 'All Products' }, ...categories.map((c) => ({ id: c.id, label: c.label }))],
+    [categories]
+  );
 
   const currentCategory = searchParams.get('category') || 'all';
   const searchQuery = searchParams.get('search') || '';
@@ -49,7 +47,7 @@ export default function Shop() {
 
   // Filter & Sort products
   const filteredProducts = useMemo(() => {
-    let list = getAllProducts();
+    let list = products;
 
     if (currentCategory && currentCategory !== 'all') {
       list = list.filter((p) => p.category === currentCategory);
@@ -65,7 +63,7 @@ export default function Shop() {
     }
 
     return sortProducts(list, currentSort);
-  }, [currentCategory, searchQuery, currentSort]);
+  }, [products, currentCategory, searchQuery, currentSort]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
@@ -158,7 +156,9 @@ export default function Shop() {
         {/* Results Metadata Bar */}
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6 px-1">
           <p className="text-sm text-stone-500 font-medium">
-            {filteredProducts.length > 0 ? (
+            {loading ? (
+              'Loading products…'
+            ) : filteredProducts.length > 0 ? (
               <>
                 Showing <span className="font-semibold text-stone-800">{startIndex}–{endIndex}</span> of{' '}
                 <span className="font-semibold text-stone-800">{filteredProducts.length}</span> products
@@ -179,7 +179,24 @@ export default function Shop() {
         </motion.div>
 
         {/* Product Grid */}
-        {paginatedProducts.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-12" aria-busy="true">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-stone-200/80 overflow-hidden animate-pulse">
+                <div className="aspect-square bg-stone-100" />
+                <div className="p-4 space-y-2">
+                  <div className="h-3 bg-stone-100 rounded w-3/4" />
+                  <div className="h-3 bg-stone-100 rounded w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-stone-200/80 my-12 max-w-lg mx-auto">
+            <h3 className="font-serif text-xl font-bold text-stone-800 mb-2">Couldn't load products</h3>
+            <p className="text-stone-500 text-sm">Please check your connection and refresh the page.</p>
+          </div>
+        ) : paginatedProducts.length > 0 ? (
           <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-12">
             {paginatedProducts.map((product) => (
               <ProductCard key={product.id} product={product} />

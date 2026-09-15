@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import useReveal from '../../hooks/useReveal';
+import { useStore } from '../../context/StoreContext';
+import { optimizeImage } from '../../lib/cloudinary';
 
-const categories = [
+const fallbackCategories = [
   {
     id: 'living',
     title: 'Living Room',
@@ -30,6 +31,13 @@ const categories = [
 ];
 
 export default function CategoryGrid() {
+  const { categories: storeCategories } = useStore();
+  const categories = storeCategories.length
+    ? storeCategories
+        .filter((c) => c.image)
+        .slice(0, 4)
+        .map((c) => ({ id: c.id, title: c.label, subtitle: c.subtitle, image: optimizeImage(c.image, 800) }))
+    : fallbackCategories;
   const [hasIntersected, setHasIntersected] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const sectionRef = React.useRef(null);

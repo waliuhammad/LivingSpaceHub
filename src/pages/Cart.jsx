@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useStore } from '../context/StoreContext';
+import { calcShipping } from '../lib/db';
 
 function formatRs(amount) {
   return `Rs.${Math.round(amount).toLocaleString('en-PK')}`;
 }
 
 export default function Cart() {
-  const { cart, removeItem, updateQuantity, clearCart, subtotal } = useCart();
+  const { cart, removeItem, updateQuantity, subtotal } = useCart();
+  const { settings } = useStore();
   const [localQtys, setLocalQtys] = useState({});
-  const [checkedOut, setCheckedOut] = useState(false);
   const navigate = useNavigate();
 
   /* ── helpers ── */
@@ -28,16 +30,12 @@ export default function Cart() {
     setLocalQtys({});
   };
 
-  const shipping = subtotal === 0 ? 0 : 0; // Free shipping always
+  const shipping = calcShipping(subtotal, settings);
   const total = subtotal + shipping;
 
   const handleCheckout = () => {
     handleUpdate();
-    setCheckedOut(true);
-    setTimeout(() => {
-      clearCart();
-      navigate('/shop');
-    }, 2000);
+    navigate('/checkout');
   };
 
   /* ── empty state ── */
@@ -334,7 +332,15 @@ export default function Cart() {
 
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '1rem' }}>
             <Row label="Subtotal" value={formatRs(subtotal)} />
-            <Row label="Shipping" value={<span style={{ color: '#5A7A5A', fontWeight: '600' }}>Free</span>} />
+            <Row
+              label="Shipping"
+              value={shipping === 0 ? <span style={{ color: '#5A7A5A', fontWeight: '600' }}>Free</span> : formatRs(shipping)}
+            />
+            {shipping > 0 && settings.freeShippingThreshold > 0 && (
+              <p style={{ fontFamily: 'sans-serif', fontSize: '0.72rem', color: '#888', margin: '0 0 0.5rem' }}>
+                Add {formatRs(settings.freeShippingThreshold - subtotal)} more for free shipping.
+              </p>
+            )}
           </div>
 
           <div
@@ -358,13 +364,12 @@ export default function Cart() {
           {!isEmpty && (
             <button
               onClick={handleCheckout}
-              disabled={checkedOut}
               style={{
                 display: 'block',
                 width: '100%',
                 marginTop: '1.4rem',
                 padding: '0.9rem',
-                backgroundColor: checkedOut ? '#888' : '#4A5D3A',
+                backgroundColor: '#4A5D3A',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '999px',
@@ -373,13 +378,13 @@ export default function Cart() {
                 fontWeight: '700',
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
-                cursor: checkedOut ? 'default' : 'pointer',
+                cursor: 'pointer',
                 transition: 'background 0.2s',
               }}
-              onMouseEnter={(e) => !checkedOut && (e.target.style.backgroundColor = '#3a4d2a')}
-              onMouseLeave={(e) => !checkedOut && (e.target.style.backgroundColor = '#4A5D3A')}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = '#3a4d2a')}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = '#4A5D3A')}
             >
-              {checkedOut ? 'Order Placed ✓' : 'Proceed to Checkout'}
+              Proceed to Checkout
             </button>
           )}
 
@@ -393,7 +398,7 @@ export default function Cart() {
               marginBottom: 0,
             }}
           >
-            Secure SSL encrypted checkout
+            Cash on Delivery, JazzCash &amp; EasyPaisa accepted
           </p>
         </div>
       </div>

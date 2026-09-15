@@ -1,9 +1,11 @@
+import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import CustomCursor from './CustomCursor';
 import ScrollToTop from './ScrollToTop';
 import { AnimatePresence } from 'framer-motion';
+import PageLoader from './PageLoader';
 
 export default function Layout() {
   const location = useLocation();
@@ -15,7 +17,9 @@ export default function Layout() {
       <Header />
       <AnimatePresence mode="wait">
         <main key={location.pathname} className="flex-1">
-          <Outlet />
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
       </AnimatePresence>
       <Footer />

@@ -1,0 +1,45 @@
+# Living Space Hub — Apache / LiteSpeed config for Hostinger
+# Copied into dist/ by Vite at build time. Upload it together with the rest of dist/.
+
+Options -MultiViews -Indexes
+
+# ---------------------------------------------------------------------------
+# React Router (client-side routing)
+# Serve index.html for any URL that isn't a real file or folder, so that
+# refreshing or directly opening /shop, /product/12, /admin, etc. works.
+# ---------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Force HTTPS (enable once SSL is active in hPanel)
+  # RewriteCond %{HTTPS} off
+  # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Compression
+# ---------------------------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/json image/svg+xml
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Caching
+# index.html is never cached so new deploys show up instantly. Hashed build
+# files in /assets are cached for a year (see assets/.htaccess). Un-hashed
+# files from public/ (e.g. banner images) get a shorter cache.
+# ---------------------------------------------------------------------------
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|png|jpe?g|gif|webp|avif|svg|ico|woff2?)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+</IfModule>

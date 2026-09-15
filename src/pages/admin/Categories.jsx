@@ -1,60 +1,150 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
-import productsData from '../../data/products.json';
-import { Plus, Tag, Trash2, Edit2 } from 'lucide-react';
+import Modal, { fieldClass, labelClass, primaryBtn, secondaryBtn } from '../../components/admin/Modal';
+import ImageUploader from '../../components/admin/ImageUploader';
+import useLiveQuery from '../../hooks/useLiveQuery';
+import { deleteCategory, saveCategory, slugify, subscribeCategories, subscribeProducts } from '../../lib/db';
+import { optimizeImage } from '../../lib/cloudinary';
+import { Plus, Tag, Trash2, Edit2, Loader2 } from 'lucide-react';
 
 export default function Categories() {
-  const categoriesMap = productsData.reduce((acc, product) => {
-    if (!acc[product.category]) {
-      acc[product.category] = [];
-    }
-    acc[product.category].push(product);
-    return acc;
-  }, {});
+  const { data: categories, loading } = useLiveQuery(subscribeCategories);
+  const { data: products } = useLiveQuery(subscribeProducts);
+  const [editing, setEditing] = useState(null);
 
-  const categories = Object.entries(categoriesMap).map(([category, products], index) => ({
-    id: index + 1,
-    category,
-    products
-  }));
+  const countFor = (slug) => products.filter((p) => p.category === slug).length;
+
+  const handleDelete = async (cat) => {
+    const count = countFor(cat.id);
+    if (count > 0) {
+      window.alert(`"${cat.label}" still has ${count} product(s). Move or delete them first.`);
+      return;
+    }
+    if (!window.confirm(`Delete the "${cat.label}" category?`)) return;
+    try {
+      await deleteCategory(cat.id);
+    } catch (err) {
+      window.alert(`Could not delete category: ${err.message}`);
+    }
+  };
 
   return (
     <div>
-      <AdminPageHeader 
-        titlePrefix="Store" 
-        titleAccent="Categories" 
-        subtitle="Manage product categories and collections"
-      >
-        <button className="bg-[#5A5A40] text-white px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 hover:bg-[#4a4a35] transition-colors">
+      <AdminPageHeader titlePrefix="Store" titleAccent="Categories" subtitle="Manage product categories and collections">
+        <button onClick={() => setEditing({ label: '', subtitle: '', image: '', imagePublicId: '', sortOrder: categories.length })} className={primaryBtn}>
           <Plus size={16} />
           New Category
         </button>
       </AdminPageHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {categories.map(cat => (
-          <div key={cat.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center group">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[#5A5A40]/10 text-[#5A5A40] flex items-center justify-center">
-                <Tag size={24} />
+      {loading ? (
+        <p className="text-gray-400 text-center py-12">Loading categories…</p>
+      ) : categories.length === 0 ? (
+        <p className="text-gray-500 text-center py-12">No categories yet. Create one, or import the starter catalog from the Products page.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {categories.map((cat) => (
+            <div key={cat.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center group">
+              <div className="flex items-center gap-4">
+                {cat.image ? (
+                  <img src={optimizeImage(cat.image, 96)} alt="" className="w-12 h-12 rounded-xl object-cover" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-[#5A5A40]/10 text-[#5A5A40] flex items-center justify-center">
+                    <Tag size={24} />
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">{cat.label}</h3>
+                  <p className="text-gray-500 text-sm">
+                    {countFor(cat.id)} Products • <span className="font-mono text-xs">{cat.id}</span>
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-lg">{cat.category}</h3>
-                <p className="text-gray-500 text-sm">{cat.products.length} Products</p>
+
+              <div className="flex items-center gap-2 sm:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                <button onClick={() => setEditing(cat)} className="p-2 text-gray-400 hover:text-[#5A5A40] hover:bg-gray-100 rounded-lg transition-colors" aria-label={`Edit ${cat.label}`}>
+                  <Edit2 size={18} />
+                </button>
+                <button onClick={() => handleDelete(cat)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" aria-label={`Delete ${cat.label}`}>
+                  <Trash2 size={18} />
+                </button>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button className="p-2 text-gray-400 hover:text-[#5A5A40] hover:bg-gray-100 rounded-lg transition-colors">
-                <Edit2 size={18} />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" onClick={() => window.confirm('Are you sure you want to delete this category?')}>
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {editing && <CategoryForm initial={editing} existingIds={categories.map((c) => c.id)} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+function CategoryForm({ initial, existingIds, onClose }) {
+  const isNew = !initial.id;
+  const [form, setForm] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const slug = isNew ? slugify(form.label) : initial.id;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!slug) {
+      setError('Please enter a name.');
+      return;
+    }
+    if (isNew && existingIds.includes(slug)) {
+      setError('A category with this name already exists.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveCategory(slug, form);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={isNew ? 'New Category' : 'Edit Category'}
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className={secondaryBtn}>Cancel</button>
+          <button type="submit" form="category-form" disabled={saving} className={primaryBtn}>
+            {saving && <Loader2 size={16} className="animate-spin" />}
+            {saving ? 'Saving…' : 'Save Category'}
+          </button>
+        </>
+      }
+    >
+      <form id="category-form" onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="c-label" className={labelClass}>Name</label>
+          <input id="c-label" required maxLength={60} value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} className={fieldClass} />
+          <p className="text-xs text-gray-500 mt-1">URL key: <span className="font-mono">{slug || '—'}</span>{!isNew && ' (fixed)'}</p>
+        </div>
+        <div>
+          <label htmlFor="c-subtitle" className={labelClass}>Tagline</label>
+          <input id="c-subtitle" maxLength={80} value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} className={fieldClass} placeholder="e.g. Serene Sanctuaries" />
+        </div>
+        <div>
+          <label htmlFor="c-order" className={labelClass}>Display Order</label>
+          <input id="c-order" type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: e.target.value })} className={fieldClass} />
+        </div>
+        <ImageUploader
+          label="Cover Image (homepage)"
+          folder="categories"
+          aspect="aspect-[4/5]"
+          value={form.image}
+          onChange={({ url, publicId }) => setForm((f) => ({ ...f, image: url, imagePublicId: publicId }))}
+        />
+        {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
+      </form>
+    </Modal>
   );
 }

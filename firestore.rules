@@ -1,0 +1,164 @@
+rules_version = '2';
+
+// Living Space Hub — Firestore security rules.
+// The site runs on the free Spark plan with no server code, so these rules are the
+// backend's only line of defence. Deploy with: npm run firebase:rules
+//
+// Roles live in users/{uid}.role: 'customer' | 'support' | 'manager' | 'admin'.
+// Keep the role helpers in sync with src/lib/roles.js.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ───────────── helpers ───────────── */
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : 'guest';
+    }
+
+    function isStaff()   { return role() in ['admin', 'manager', 'support']; }
+    function isCatalog() { return role() in ['admin', 'manager']; }
+    function isAdmin()   { return role() == 'admin'; }
+
+    function str(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    /* ───────────── catalog (public read) ───────────── */
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update: if isCatalog() && validProduct(request.resource.data);
+      allow delete: if isCatalog();
+
+      function validProduct(d) {
+        return d.keys().hasAll(['name', 'price', 'category', 'stock', 'active'])
+          && str(d.name, 1, 200)
+          && d.price is number && d.price >= 0
+          && str(d.category, 1, 40)
+          && d.stock is int && d.stock >= 0
+          && d.active is bool;
+      }
+    }
+
+    match /categories/{slug} {
+      allow read: if true;
+      allow write: if isCatalog();
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    /* ───────────── orders ───────────── */
+
+    match /orders/{orderId} {
+      // Guests and signed-in customers can place orders. Customers can read their own.
+      allow create: if validOrder(request.resource.data);
+      allow read: if isStaff() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isStaff() && changedOnly(['status', 'payment', 'updatedAt'])
+        && request.resource.data.status in ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled']
+        && request.resource.data.payment.method == resource.data.payment.method
+        && request.resource.data.payment.reference == resource.data.payment.reference
+        && request.resource.data.payment.status in ['Pending', 'Paid', 'Failed', 'Refunded'];
+      allow delete: if isAdmin();
+
+      // Mirrors calcShipping() in src/lib/db.js. No settings doc yet means free shipping.
+      function expectedShipping(subtotal) {
+        let path = /databases/$(database)/documents/settings/store;
+        let s = exists(path) ? get(path).data : {};
+        let fee = s.get('shippingFee', 0);
+        let threshold = s.get('freeShippingThreshold', 0);
+        return (threshold > 0 && subtotal >= threshold) ? 0 : fee;
+      }
+
+      function validOrder(d) {
+        return d.keys().hasOnly(['orderNumber', 'customer', 'notes', 'items', 'subtotal', 'shipping', 'total', 'payment', 'status', 'userId', 'createdAt', 'updatedAt'])
+          && d.keys().hasAll(['orderNumber', 'customer', 'notes', 'items', 'subtotal', 'shipping', 'total', 'payment', 'status', 'userId', 'createdAt', 'updatedAt'])
+          && str(d.orderNumber, 8, 40)
+          && d.customer.keys().hasOnly(['name', 'email', 'phone', 'address', 'city'])
+          && str(d.customer.name, 1, 100)
+          && str(d.customer.email, 0, 120)
+          && str(d.customer.phone, 7, 20)
+          && str(d.customer.address, 5, 300)
+          && str(d.customer.city, 1, 60)
+          && str(d.notes, 0, 500)
+          && d.items is list && d.items.size() > 0 && d.items.size() <= 50
+          && d.subtotal is number && d.subtotal > 0
+          && d.shipping == expectedShipping(d.subtotal)
+          && d.total == d.subtotal + d.shipping
+          && d.status == 'Pending'
+          && d.payment.keys().hasOnly(['method', 'status', 'reference'])
+          && d.payment.method in ['cod', 'jazzcash', 'easypaisa']
+          && d.payment.status == 'Pending'
+          && str(d.payment.reference, 0, 40)
+          && (d.payment.method == 'cod' || d.payment.reference.size() >= 4)
+          && (d.userId == null || (signedIn() && d.userId == request.auth.uid))
+          && d.createdAt == request.time
+          && d.updatedAt == request.time;
+      }
+    }
+
+    /* ───────────── contact messages & newsletter ───────────── */
+
+    match /messages/{messageId} {
+      allow create: if request.resource.data.keys().hasOnly(['name', 'email', 'subject', 'message', 'isRead', 'createdAt'])
+        && str(request.resource.data.name, 1, 100)
+        && str(request.resource.data.email, 3, 120)
+        && str(request.resource.data.subject, 1, 200)
+        && str(request.resource.data.message, 1, 5000)
+        && request.resource.data.isRead == false
+        && request.resource.data.createdAt == request.time;
+      allow read, delete: if isStaff();
+      allow update: if isStaff() && changedOnly(['isRead']);
+    }
+
+    match /subscribers/{email} {
+      // Doc id is the lowercased email; "create only" means re-subscribing can't overwrite.
+      allow create: if request.resource.data.keys().hasOnly(['email', 'createdAt'])
+        && request.resource.data.email == email
+        && str(email, 3, 120)
+        && request.resource.data.createdAt == request.time;
+      allow read, delete: if isStaff();
+    }
+
+    /* ───────────── user profiles & roles ───────────── */
+
+    match /users/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isStaff();
+
+      // Everyone signs up as a customer. Staff roles are granted by an admin (or scripts/make-admin.mjs).
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'role', 'createdAt'])
+        && request.resource.data.role == 'customer'
+        && request.resource.data.email == request.auth.token.email
+        && str(request.resource.data.name, 1, 100)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if (
+          signedIn() && request.auth.uid == uid
+          && changedOnly(['name', 'phone'])
+          && str(request.resource.data.name, 1, 100)
+          && str(request.resource.data.phone, 0, 20)
+        ) || (
+          // Admins change other people's roles, never their own (prevents locking yourself out).
+          isAdmin() && request.auth.uid != uid
+          && changedOnly(['role'])
+          && request.resource.data.role in ['customer', 'support', 'manager', 'admin']
+        );
+
+      allow delete: if false;
+    }
+  }
+}

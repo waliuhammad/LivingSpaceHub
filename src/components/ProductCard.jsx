@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Eye, Heart, CheckCircle2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { formatPrice } from '../lib/products';
+import { formatPrice, isInStock } from '../lib/products';
+import { optimizeImage } from '../lib/cloudinary';
 
 export default function ProductCard({ product }) {
   const { addItem } = useCart();
@@ -11,13 +12,16 @@ export default function ProductCard({ product }) {
   const [showToast, setShowToast] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
+  const inStock = isInStock(product);
+
   const handleAdd = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!inStock) return;
     addItem(product);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2000);
-  }, [addItem, product]);
+  }, [addItem, product, inStock]);
 
   const handleToggleLike = useCallback((e) => {
     e.preventDefault();
@@ -32,7 +36,7 @@ export default function ProductCard({ product }) {
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden bg-[#F5F2ED]">
         <img
-          src={imgError ? fallbackImg : product.image}
+          src={imgError || !product.image ? fallbackImg : optimizeImage(product.image, 600)}
           alt={product.name}
           loading="lazy"
           onError={() => setImgError(true)}
@@ -43,8 +47,9 @@ export default function ProductCard({ product }) {
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
           <button
             onClick={handleAdd}
-            className="w-11 h-11 rounded-full bg-white text-stone-800 hover:bg-[#5A5A40] hover:text-white flex items-center justify-center shadow-lg transition-all duration-200 transform hover:scale-110"
-            title="Add to Cart"
+            disabled={!inStock}
+            className="disabled:opacity-40 w-11 h-11 rounded-full bg-white text-stone-800 hover:bg-[#5A5A40] hover:text-white flex items-center justify-center shadow-lg transition-all duration-200 transform hover:scale-110"
+            title={inStock ? 'Add to Cart' : 'Out of stock'}
           >
             <ShoppingBag className="w-5 h-5" />
           </button>
@@ -72,6 +77,12 @@ export default function ProductCard({ product }) {
             <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
           </button>
         </div>
+
+        {!inStock && (
+          <span className="absolute top-3 left-3 bg-stone-900/80 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+            Sold out
+          </span>
+        )}
 
         {/* Toast Alert */}
         {showToast && (

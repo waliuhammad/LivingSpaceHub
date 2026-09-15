@@ -2,19 +2,16 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import ProductCard from '../ProductCard';
-import { getAllProducts } from '../../lib/products';
+import { useStore } from '../../context/StoreContext';
 import useReveal from '../../hooks/useReveal';
 
 export default function TrendingProducts() {
   const sectionRef = useReveal();
-  const all = getAllProducts();
-  // Get products matching livingspaceshub.com featured ids or top items
-  const trending = [
-    all.find((p) => p.id === 3) || all[0],
-    all.find((p) => p.id === 4) || all[1],
-    all.find((p) => p.id === 5) || all[2],
-    all.find((p) => p.id === 18) || all[3],
-  ].filter(Boolean);
+  const { products } = useStore();
+  // Products marked "featured" in the admin panel, topped up with the rest of the catalog
+  const trending = [...products.filter((p) => p.featured), ...products.filter((p) => !p.featured)].slice(0, 4);
+
+  if (trending.length === 0) return null;
 
   return (
     <section ref={sectionRef} className="py-20 bg-[#F5F2ED]">

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { authErrorMessage, useAuth } from '../context/AuthContext';
 import { Shield, Eye, EyeOff, AlertCircle, ArrowRight, Lock } from 'lucide-react';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, user, isStaff, loading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,12 +13,16 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // If already authenticated, redirect straight to admin
+  // Once signed in and the profile has loaded, staff go straight to the dashboard
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!user || loading) return;
+    if (isStaff) {
       navigate('/admin', { replace: true });
+    } else {
+      setIsLoading(false);
+      setError(`${user.email} does not have admin access. Ask an administrator to add you under Team & Roles.`);
     }
-  }, [isAuthenticated, navigate]);
+  }, [user, loading, isStaff, navigate]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -36,15 +40,10 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
-      if (result.success) {
-        navigate('/admin', { replace: true });
-      } else {
-        setError(result.error || 'Login failed. Please check your credentials.');
-      }
+      // Redirect (or the "no access" message) is handled by the effect above once the role loads
+      await login(email, password);
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
+      setError(authErrorMessage(err));
       setIsLoading(false);
     }
   };
@@ -155,7 +154,7 @@ export default function AdminLogin() {
 
           {/* Card Subtitle */}
           <p
-            className="text-center mb-4"
+            className="text-center mb-8"
             style={{
               fontFamily: "'Montserrat', sans-serif",
               fontSize: '13px',
@@ -166,28 +165,6 @@ export default function AdminLogin() {
             Sign in to manage products, orders and stock.
           </p>
 
-          {/* Disclaimer */}
-          <div
-            className="rounded-xl px-4 py-3 mb-8"
-            style={{
-              backgroundColor: 'rgba(90, 90, 64, 0.04)',
-              border: '1px solid rgba(90, 90, 64, 0.08)',
-            }}
-          >
-            <p
-              className="text-center"
-              style={{
-                fontFamily: "'Montserrat', sans-serif",
-                fontSize: '11px',
-                lineHeight: '18px',
-                color: '#999',
-              }}
-            >
-              This login is a client-side demo guard — it keeps the admin area tidy for review purposes.
-              It is not a secure authentication system. Any real admin functionality should be protected
-              by server-side role checks.
-            </p>
-          </div>
 
           {/* Error Message */}
           {error && (
@@ -312,27 +289,6 @@ export default function AdminLogin() {
               </div>
             </div>
 
-            {/* Demo Credentials Hint */}
-            <div
-              className="rounded-xl px-4 py-3"
-              style={{
-                backgroundColor: 'rgba(212, 163, 115, 0.08)',
-                border: '1px solid rgba(212, 163, 115, 0.15)',
-              }}
-            >
-              <p
-                style={{
-                  fontFamily: "'Montserrat', sans-serif",
-                  fontSize: '11px',
-                  lineHeight: '18px',
-                  color: '#b08a5e',
-                  margin: 0,
-                  textAlign: 'center',
-                }}
-              >
-                <strong>Demo credentials:</strong> Use any email &amp; any password to sign in.
-              </p>
-            </div>
 
             {/* Submit Button */}
             <button

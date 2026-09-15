@@ -1,6 +1,6 @@
-import productsData from '../data/products.json';
+export { formatPrice } from './format';
 
-/* ── product descriptions by category ── */
+/* ── fallback descriptions by category, used when a product has none ── */
 const descriptionTemplates = {
   living: [
     "Elevate your living room with this handcrafted piece, designed to blend artisan quality with modern aesthetics. Its warm tones and organic textures create an inviting focal point.",
@@ -24,56 +24,14 @@ const descriptionTemplates = {
   ],
 };
 
-function getDescription(product) {
+export function getDescription(product) {
+  if (product.description) return product.description;
   const templates = descriptionTemplates[product.category] || descriptionTemplates.decor;
-  const idx = product.id % templates.length;
-  return templates[idx];
+  const hash = [...String(product.id)].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return templates[hash % templates.length];
 }
 
-/* ── pad catalog to ~130 items ── */
-function padCatalog(original) {
-  const padded = [...original];
-  let nextId = Math.max(...original.map(p => p.id)) + 1;
-  const priceVariations = [0.85, 0.9, 0.95, 1.05, 1.1, 1.15];
-  const namePrefixes = ['Premium', 'Artisan', 'Classic', 'Modern'];
-
-  while (padded.length < 130) {
-    const source = original[padded.length % original.length];
-    const prefix = namePrefixes[padded.length % namePrefixes.length];
-    const priceVar = priceVariations[padded.length % priceVariations.length];
-    padded.push({
-      ...source,
-      id: nextId++,
-      name: `${prefix} ${source.name}`,
-      price: Math.round(source.price * priceVar),
-    });
-  }
-  return padded;
-}
-
-const allProducts = padCatalog(productsData);
-
-/* ── public API ── */
-export function getAllProducts() {
-  return allProducts;
-}
-
-export function getProductById(id) {
-  const product = allProducts.find(p => p.id === Number(id));
-  if (!product) return null;
-  return { ...product, description: getDescription(product) };
-}
-
-export function getProductsByCategory(cat) {
-  if (!cat || cat === 'all') return allProducts;
-  return allProducts.filter(p => p.category === cat);
-}
-
-export function searchProducts(query) {
-  if (!query) return allProducts;
-  const q = query.toLowerCase();
-  return allProducts.filter(p => p.name.toLowerCase().includes(q));
-}
+const createdMs = (p) => (p.createdAt?.toMillis ? p.createdAt.toMillis() : 0);
 
 export function sortProducts(products, sort) {
   const sorted = [...products];
@@ -83,20 +41,15 @@ export function sortProducts(products, sort) {
     case 'high_low':
       return sorted.sort((a, b) => b.price - a.price);
     case 'newest':
-      return sorted.sort((a, b) => b.id - a.id);
+      return sorted.sort((a, b) => createdMs(b) - createdMs(a));
     default:
-      return sorted;
+      // Featured first, then newest
+      return sorted.sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)) || createdMs(b) - createdMs(a));
   }
 }
 
-export function getRelatedProducts(productId, category, count = 4) {
-  return allProducts
-    .filter(p => p.category === category && p.id !== Number(productId))
-    .slice(0, count);
+export function getRelatedProducts(products, product, count = 4) {
+  return products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, count);
 }
 
-export function formatPrice(amount) {
-  if (amount === undefined || amount === null) return 'Rs.0';
-  return `Rs.${Number(amount).toLocaleString()}`;
-}
-
+export const isInStock = (product) => (Number(product.stock) || 0) > 0;
