@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import StatusPill from '../../components/admin/StatusPill';
 import useLiveQuery from '../../hooks/useLiveQuery';
-import { PAYMENT_METHODS, subscribeOrders, toDate } from '../../lib/db';
+import { isPaymentReceived, PAYMENT_METHODS, subscribeOrders, toDate } from '../../lib/db';
 import { formatPrice } from '../../lib/format';
 import { Download, Search, Copy, CheckCircle2 } from 'lucide-react';
 import Papa from 'papaparse';
@@ -24,7 +24,8 @@ export default function Transactions() {
       method: o.payment?.method,
       reference: o.payment?.reference || '',
       amount: Number(o.total) || 0,
-      status: o.payment?.status || 'Pending',
+      // A delivered Cash on Delivery order counts as paid even if nobody updated its payment status
+      status: isPaymentReceived(o) ? 'Paid' : o.payment?.status || 'Pending',
       date: toDate(o.createdAt),
     }));
 

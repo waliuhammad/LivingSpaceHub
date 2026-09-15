@@ -67,8 +67,10 @@ export default function Orders() {
 
   const handleStatus = (order, status) =>
     run(async () => {
-      const { stockChanged } = await setOrderStatus(order.id, status);
-      const stockNote = stockChanged === 'deducted' ? ' Stock was reduced.' : stockChanged === 'restored' ? ' Stock was restored.' : '';
+      const { stockChanged, markedPaid } = await setOrderStatus(order.id, status);
+      const stockNote =
+        (stockChanged === 'deducted' ? ' Stock was reduced.' : stockChanged === 'restored' ? ' Stock was restored.' : '') +
+        (markedPaid ? ' Cash on Delivery payment marked Paid.' : '');
       const emailNote = order.customer?.email && ['Confirmed', 'Shipped', 'Delivered', 'Cancelled'].includes(status) ? ' Customer email sent.' : '';
       if (emailNote) notifyOrderStatus(order.id);
       setNotice(`${order.orderNumber} marked ${status}.${stockNote}${emailNote}`);

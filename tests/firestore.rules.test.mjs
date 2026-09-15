@@ -254,6 +254,10 @@ describe('orders', () => {
     await assertSucceeds(getDocs(collection(dbAs('support'), 'orders')));
     await assertSucceeds(updateDoc(doc(dbAs('support'), 'orders', 'alice-order'), { status: 'Shipped', updatedAt: serverTimestamp() }));
     await assertSucceeds(updateDoc(doc(dbAs('manager'), 'orders', 'alice-order'), { 'payment.status': 'Paid', 'payment.updatedAt': serverTimestamp() }));
+    // Delivering a Cash on Delivery order marks its payment Paid in the same update
+    await assertSucceeds(
+      updateDoc(doc(dbAs('support'), 'orders', 'alice-order'), { status: 'Delivered', 'payment.status': 'Paid', 'payment.updatedAt': serverTimestamp(), updatedAt: serverTimestamp() })
+    );
     await assertFails(updateDoc(doc(dbAs('manager'), 'orders', 'alice-order'), { total: 1 }));
     await assertFails(updateDoc(doc(dbAs('manager'), 'orders', 'alice-order'), { 'payment.reference': 'forged' }));
     await assertFails(updateDoc(doc(dbAs('manager'), 'orders', 'alice-order'), { status: 'Lost' }));

@@ -5,7 +5,7 @@ import SummaryPanel from '../../components/admin/SummaryPanel';
 import useLiveQuery from '../../hooks/useLiveQuery';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/roles';
-import { countUsers, subscribeOrders, subscribeProducts, toDate } from '../../lib/db';
+import { countUsers, isPaymentReceived, subscribeOrders, subscribeProducts, toDate } from '../../lib/db';
 import { formatPrice } from '../../lib/format';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Banknote, ShoppingBag, Package, Users } from 'lucide-react';
@@ -24,7 +24,7 @@ export default function Overview() {
 
   const stats = useMemo(() => {
     const live = orders.filter((o) => o.status !== 'Cancelled');
-    const revenue = live.filter((o) => o.payment?.status === 'Paid').reduce((s, o) => s + o.total, 0);
+    const revenue = live.filter(isPaymentReceived).reduce((s, o) => s + o.total, 0);
     const pendingOrders = orders.filter((o) => o.status === 'Pending').length;
     const unitsInStock = products.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
     const outOfStock = products.filter((p) => (Number(p.stock) || 0) === 0).length;

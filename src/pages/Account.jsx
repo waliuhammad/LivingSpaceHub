@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Heart, LayoutDashboard, LogOut, MailWarning, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
-import { cancelMyOrder, fetchMyOrders, PAYMENT_METHODS, toDate, updateOwnProfile } from '../lib/db';
+import { cancelMyOrder, fetchMyOrders, isPaymentReceived, PAYMENT_METHODS, toDate, updateOwnProfile } from '../lib/db';
 import { formatDate, formatPrice } from '../lib/format';
 import StatusPill from '../components/admin/StatusPill';
 import PageLoader from '../components/PageLoader';
@@ -162,7 +162,7 @@ export default function Account() {
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusPill status={order.status} />
-                      {order.payment?.status === 'Paid' && <StatusPill status="Paid" />}
+                      {isPaymentReceived(order) && <StatusPill status="Paid" />}
                     </div>
                   </div>
                   <ul className="text-sm text-stone-700 space-y-1 mb-3">

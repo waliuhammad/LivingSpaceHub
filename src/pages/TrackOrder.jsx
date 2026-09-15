@@ -110,7 +110,7 @@ export default function TrackOrder() {
             )}
 
             <p className="text-sm text-stone-600 mt-6 pt-4 border-t border-stone-100">
-              Payment: {PAYMENT_METHODS[result.paymentMethod]} — <span className="font-semibold">{result.paymentStatus === 'Paid' ? 'Received' : result.paymentStatus}</span>
+              Payment: {PAYMENT_METHODS[result.paymentMethod]} — <span className="font-semibold">{result.paymentStatus === 'Paid' || (result.paymentMethod === 'cod' && result.status === 'Delivered' && result.paymentStatus === 'Pending') ? 'Received' : result.paymentStatus}</span>
             </p>
             <p className="text-xs text-stone-500 mt-3">
               Need to change or cancel this order?{' '}

@@ -70,6 +70,17 @@ export const PAYMENT_METHODS = {
 export const ORDER_STATUSES = ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
 export const PAYMENT_STATUSES = ['Pending', 'Paid', 'Failed', 'Refunded'];
 
+/**
+ * Money actually received for an order: marked Paid, or a Cash on Delivery order that was delivered
+ * (the courier collected the cash) and hasn't been marked Failed/Refunded.
+ */
+export function isPaymentReceived(order) {
+  if (!order || order.status === 'Cancelled') return false;
+  const payment = order.payment || {};
+  if (payment.status === 'Paid') return true;
+  return payment.method === 'cod' && order.status === 'Delivered' && payment.status === 'Pending';
+}
+
 /** Every status except Cancelled holds the ordered stock (it is taken the moment an order is placed). */
 const STOCK_HELD_STATUSES = ['Pending', 'Confirmed', 'Shipped', 'Delivered'];
 
@@ -406,6 +417,9 @@ export async function setOrderStatus(orderId, status) {
       }
     }
 
+    // Cash on Delivery: delivered means the cash was collected
+    const markPaid = status === 'Delivered' && order.payment?.method === 'cod' && order.payment?.status === 'Pending';
+
     for (const { productRef, stock } of productUpdates) {
       tx.update(productRef, { stock, stockOrderId: orderId, updatedAt: serverTimestamp() });
     }
@@ -413,11 +427,12 @@ export async function setOrderStatus(orderId, status) {
       status,
       updatedAt: serverTimestamp(),
       ...(deduct ? { stockDeducted: true } : restore ? { stockDeducted: false } : {}),
+      ...(markPaid ? { 'payment.status': 'Paid', 'payment.updatedAt': serverTimestamp() } : {}),
     });
     if (trackingSnap.exists()) {
-      tx.update(trackingRef, { status, updatedAt: serverTimestamp() });
+      tx.update(trackingRef, { status, ...(markPaid ? { paymentStatus: 'Paid' } : {}), updatedAt: serverTimestamp() });
     }
-    return { stockChanged: deduct ? 'deducted' : restore ? 'restored' : null };
+    return { stockChanged: deduct ? 'deducted' : restore ? 'restored' : null, markedPaid: markPaid };
   });
 }
 
