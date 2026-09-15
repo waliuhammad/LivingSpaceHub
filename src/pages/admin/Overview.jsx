@@ -26,6 +26,7 @@ export default function Overview() {
     const live = orders.filter((o) => o.status !== 'Cancelled');
     const revenue = live.filter((o) => o.payment?.status === 'Paid').reduce((s, o) => s + o.total, 0);
     const pendingOrders = orders.filter((o) => o.status === 'Pending').length;
+    const unitsInStock = products.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
     const outOfStock = products.filter((p) => (Number(p.stock) || 0) === 0).length;
     const lowStock = products.filter((p) => {
       const s = Number(p.stock) || 0;
@@ -49,7 +50,7 @@ export default function Overview() {
       }
     });
 
-    return { revenue, pendingOrders, outOfStock, lowStock, days };
+    return { revenue, pendingOrders, unitsInStock, outOfStock, lowStock, days };
   }, [orders, products]);
 
   const stockLabel = stats.outOfStock ? `${stats.outOfStock} out of stock` : stats.lowStock ? `${stats.lowStock} running low` : 'Healthy';
@@ -79,7 +80,13 @@ export default function Overview() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard icon={Banknote} color="blue" badge="PAID" label="Revenue Received" value={formatPrice(stats.revenue)} />
         <StatCard icon={ShoppingBag} color="green" badge={`${stats.pendingOrders} PENDING`} label="Total Orders" value={orders.length} />
-        <StatCard icon={Package} color="amber" badge={stats.outOfStock ? `${stats.outOfStock} SOLD OUT` : 'IN STOCK'} label="Products" value={products.length} />
+        <StatCard
+          icon={Package}
+          color="amber"
+          badge={stats.outOfStock ? `${stats.outOfStock} SOLD OUT` : stats.lowStock ? `${stats.lowStock} LOW` : `${products.length} PRODUCTS`}
+          label="Units in Stock"
+          value={stats.unitsInStock.toLocaleString('en-PK')}
+        />
         <StatCard icon={Users} color="purple" badge="ACCOUNTS" label="Registered Users" value={userCount ?? '—'} />
       </div>
 
@@ -113,6 +120,7 @@ export default function Overview() {
               { label: 'Revenue Received', value: formatPrice(stats.revenue), color: 'text-[#D4A373]' },
               { label: 'Pending Orders', value: String(stats.pendingOrders) },
               { label: 'Total Products', value: String(products.length) },
+              { label: 'Units in Stock', value: stats.unitsInStock.toLocaleString('en-PK') },
               { label: 'Registered Users', value: userCount === null ? '—' : String(userCount) },
               { label: 'Stock Level', value: stockLabel, color: stats.outOfStock ? 'text-red-400' : stats.lowStock ? 'text-amber-400' : 'text-green-400' },
             ]}
