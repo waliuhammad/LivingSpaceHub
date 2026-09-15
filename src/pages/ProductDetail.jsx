@@ -281,7 +281,7 @@ export default function ProductDetail() {
                 <label className="block text-xs uppercase tracking-wider font-semibold text-stone-500">
                   Select Quantity:
                   <span className={`ml-2 normal-case tracking-normal ${inStock ? 'text-emerald-700' : 'text-red-600'}`}>
-                    {inStock ? (stock <= 5 ? `Only ${stock} left` : 'In stock') : 'Out of stock'}
+                    {inStock ? (stock <= 5 ? `Only ${stock} left` : `${stock} in stock`) : 'Out of stock'}
                   </span>
                 </label>
                 <div className="flex items-center gap-3">
