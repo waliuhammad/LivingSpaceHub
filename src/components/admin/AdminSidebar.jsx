@@ -11,6 +11,10 @@ import {
   Settings, 
   MessageSquare, 
   Users,
+  UserRound,
+  TicketPercent,
+  Star,
+  FileText,
   ChevronRight,
   LogOut
 } from 'lucide-react';
@@ -21,8 +25,12 @@ const navItems = [
   { name: 'Categories', path: '/admin/categories', icon: Tags, allow: can.manageCatalog },
   { name: 'Orders', path: '/admin/orders', icon: ShoppingCart, allow: can.manageOrders },
   { name: 'Transactions', path: '/admin/transactions', icon: CreditCard, allow: can.viewTransactions },
+  { name: 'Customers', path: '/admin/customers', icon: UserRound, allow: can.viewCustomers },
+  { name: 'Coupons', path: '/admin/coupons', icon: TicketPercent, allow: can.manageCoupons },
+  { name: 'Reviews', path: '/admin/reviews', icon: Star, allow: can.moderateReviews },
   { name: 'Settings', path: '/admin/settings', icon: Settings, allow: can.manageSettings },
   { name: 'Messages', path: '/admin/messages', icon: MessageSquare, allow: can.accessAdmin },
+  { name: 'Site Content', path: '/admin/content', icon: FileText, allow: can.manageContent },
   { name: 'Team & Roles', path: '/admin/team', icon: Users, allow: can.manageTeam },
 ];
 

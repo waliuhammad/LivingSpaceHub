@@ -10,6 +10,8 @@ export default defineConfig({
   // Site is served from the domain root (e.g. https://livingspacehub.com/).
   // If you deploy into a subfolder, change this to '/subfolder/'.
   base: '/',
+  // Local dev: forward /api/* to a PHP server (e.g. API_PROXY=http://127.0.0.1:8091 npm run dev)
+  server: process.env.API_PROXY ? { proxy: { '/api': process.env.API_PROXY } } : undefined,
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

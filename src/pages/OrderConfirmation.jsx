@@ -4,11 +4,13 @@ import { CheckCircle2 } from 'lucide-react';
 import { PAYMENT_METHODS } from '../lib/db';
 import { formatPrice } from '../lib/format';
 import { useAuth } from '../context/AuthContext';
+import useSeo from '../hooks/useSeo';
 
 export default function OrderConfirmation() {
   const { state } = useLocation();
   const { user } = useAuth();
   const order = state?.order;
+  useSeo({ title: 'Order placed', noindex: true });
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -35,10 +37,13 @@ export default function OrderConfirmation() {
 
         <ul className="divide-y divide-stone-100 border-y border-stone-100 mb-6">
           {order.items.map((item) => (
-            <li key={item.productId} className="py-3 flex justify-between text-sm">
+            <li key={`${item.productId}-${JSON.stringify(item.options)}`} className="py-3 flex justify-between text-sm">
               <span className="text-stone-700">
                 <span className="text-stone-400 mr-2">{item.quantity}×</span>
                 {item.name}
+                {Object.entries(item.options || {}).map(([k, v]) => (
+                  <span key={k} className="text-stone-400"> • {k}: {v}</span>
+                ))}
               </span>
               <span className="font-semibold text-stone-900">{formatPrice(item.price * item.quantity)}</span>
             </li>
@@ -48,10 +53,17 @@ export default function OrderConfirmation() {
         <dl className="space-y-2 text-sm mb-8">
           <div className="flex justify-between"><dt className="text-stone-500">Subtotal</dt><dd>{formatPrice(order.subtotal)}</dd></div>
           <div className="flex justify-between"><dt className="text-stone-500">Shipping</dt><dd>{order.shipping ? formatPrice(order.shipping) : 'Free'}</dd></div>
+          {order.discount > 0 && (
+            <div className="flex justify-between text-emerald-700"><dt>Discount ({order.couponCode})</dt><dd>−{formatPrice(order.discount)}</dd></div>
+          )}
           <div className="flex justify-between font-bold text-base"><dt>Total</dt><dd className="text-[#5A5A40]">{formatPrice(order.total)}</dd></div>
           <div className="flex justify-between pt-3"><dt className="text-stone-500">Payment</dt><dd>{PAYMENT_METHODS[order.payment.method]}</dd></div>
           <div className="flex justify-between gap-6"><dt className="text-stone-500">Deliver to</dt><dd className="text-right">{order.customer.name}, {order.customer.address}, {order.customer.city}</dd></div>
         </dl>
+
+        <p className="text-center text-xs text-stone-500 mb-6">
+          Track this order any time at <Link to="/track-order" className="underline font-semibold text-[#5A5A40]">Track Order</Link> with your order number and phone number.
+        </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link to="/shop" className="px-6 py-3 bg-[#5A5A40] text-white rounded-full text-sm font-semibold text-center">

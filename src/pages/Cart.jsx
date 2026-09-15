@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import { calcShipping } from '../lib/db';
+import useSeo from '../hooks/useSeo';
 
 function formatRs(amount) {
   return `Rs.${Math.round(amount).toLocaleString('en-PK')}`;
@@ -11,6 +12,7 @@ function formatRs(amount) {
 export default function Cart() {
   const { cart, removeItem, updateQuantity, subtotal } = useCart();
   const { settings } = useStore();
+  useSeo({ title: 'Your Bag', noindex: true });
   const [localQtys, setLocalQtys] = useState({});
   const navigate = useNavigate();
 
@@ -210,6 +212,11 @@ export default function Cart() {
                       >
                         {item.name}
                       </p>
+                      {Object.keys(item.options || {}).length > 0 && (
+                        <p style={{ fontFamily: 'sans-serif', fontSize: '0.72rem', color: '#777', margin: '0.2rem 0 0' }}>
+                          {Object.entries(item.options).map(([k, v]) => `${k}: ${v}`).join(' • ')}
+                        </p>
+                      )}
                       {item.category && (
                         <p
                           style={{

@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertCircle, Banknote, ChevronRight, Loader2, Smartphone } from 'lucide-react';
+import { AlertCircle, Banknote, ChevronRight, Loader2, Smartphone, Tag, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
-import { calcShipping, placeOrder, PAYMENT_METHODS } from '../lib/db';
+import { calcDiscount, calcShipping, fetchCoupon, OutOfStockError, placeOrder, PAYMENT_METHODS } from '../lib/db';
+import { notifyOrderPlaced } from '../lib/api';
+import useSeo from '../hooks/useSeo';
 import { formatPrice } from '../lib/format';
 import { optimizeImage } from '../lib/cloudinary';
 import PageLoader from '../components/PageLoader';
@@ -16,14 +18,19 @@ const labelClass = 'block text-xs font-bold uppercase tracking-wider text-stone-
 export default function Checkout() {
   const navigate = useNavigate();
   const { cart, clearCart } = useCart();
-  const { getProduct, settings, loading } = useStore();
-  const { user, profile } = useAuth();
+  const { getProduct, settings, loading, reload } = useStore();
+  const { user, profile, isBlocked } = useAuth();
+  useSeo({ title: 'Checkout', noindex: true });
 
   const [form, setForm] = useState({ name: '', phone: '', email: '', city: '', address: '', notes: '' });
   const [method, setMethod] = useState('cod');
   const [reference, setReference] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState(null);
+  const [couponMessage, setCouponMessage] = useState('');
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -41,26 +48,59 @@ export default function Checkout() {
     }
   }, [profile]);
 
-  // Re-price the cart against the live catalog
-  const lines = useMemo(
-    () =>
-      cart.map((item) => {
-        const product = getProduct(item.id);
-        const stock = Number(product?.stock) || 0;
-        return {
-          ...item,
-          price: product ? product.price : item.price,
-          name: product ? product.name : item.name,
-          image: product ? product.image : item.image,
-          problem: !product ? 'No longer available' : stock < item.quantity ? (stock === 0 ? 'Out of stock' : `Only ${stock} in stock`) : null,
-        };
-      }),
-    [cart, getProduct]
-  );
+  // Re-price the cart against the live catalog. Stock is shared by all option variants of a product.
+  const lines = useMemo(() => {
+    const wanted = cart.reduce((acc, i) => ({ ...acc, [i.productId]: (acc[i.productId] || 0) + i.quantity }), {});
+    return cart.map((item) => {
+      const product = getProduct(item.productId);
+      const stock = Number(product?.stock) || 0;
+      return {
+        ...item,
+        price: product ? product.price : item.price,
+        name: product ? product.name : item.name,
+        image: product ? product.image : item.image,
+        problem: !product
+          ? 'No longer available'
+          : stock < wanted[item.productId]
+            ? stock === 0
+              ? 'Out of stock'
+              : `Only ${stock} in stock`
+            : null,
+      };
+    });
+  }, [cart, getProduct]);
 
   const subtotal = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
   const shipping = calcShipping(subtotal, settings);
-  const total = subtotal + shipping;
+  const discount = calcDiscount(subtotal, coupon);
+  const total = subtotal + shipping - discount;
+
+  const applyCoupon = async (e) => {
+    e?.preventDefault();
+    setCouponMessage('');
+    if (!couponInput.trim()) return;
+    setCheckingCoupon(true);
+    try {
+      const found = await fetchCoupon(couponInput);
+      if (!found || !found.active) {
+        setCoupon(null);
+        setCouponMessage('This code is not valid.');
+      } else if (found.expiresAt && found.expiresAt.toDate() <= new Date()) {
+        setCoupon(null);
+        setCouponMessage('This code has expired.');
+      } else if (subtotal < (found.minSubtotal || 0)) {
+        setCoupon(null);
+        setCouponMessage(`Spend at least ${formatPrice(found.minSubtotal)} to use this code.`);
+      } else {
+        setCoupon(found);
+        setCouponInput('');
+      }
+    } catch {
+      setCouponMessage('Could not check the code. Please try again.');
+    } finally {
+      setCheckingCoupon(false);
+    }
+  };
   const hasProblems = lines.some((l) => l.problem);
 
   const walletOptions = [
@@ -76,8 +116,16 @@ export default function Checkout() {
     e.preventDefault();
     setError('');
 
+    if (isBlocked) {
+      setError('This account cannot place orders. Please contact us for help.');
+      return;
+    }
     if (hasProblems) {
       setError('Some items in your bag need attention before you can place the order.');
+      return;
+    }
+    if (coupon && calcDiscount(subtotal, coupon) === 0) {
+      setError('Your coupon no longer applies to this order. Remove it to continue.');
       return;
     }
     if (!/^[0-9+\-\s]{7,20}$/.test(form.phone.trim())) {
@@ -97,13 +145,27 @@ export default function Checkout() {
         items: lines,
         payment: { method, reference },
         settings,
+        coupon,
         userId: user?.uid,
       });
+      notifyOrderPlaced(order.id); // confirmation + store alert emails (best-effort)
       clearCart();
       navigate('/order-confirmation', { replace: true, state: { order } });
     } catch (err) {
       console.error('Order failed', err);
-      setError('We could not place your order. Please check your details and try again, or contact us on WhatsApp.');
+      if (err instanceof OutOfStockError) {
+        reload(); // refresh stock so the bag shows what's left
+        setError(
+          `Sorry — ${err.items.map((i) => (i.available > 0 ? `only ${i.available} of "${i.name}" left` : `"${i.name}" just sold out`)).join('; ')}. Please update your bag.`
+        );
+        setSubmitting(false);
+        return;
+      }
+      setError(
+        coupon && err.code === 'permission-denied'
+          ? 'We could not apply your coupon. Remove it and try again.'
+          : 'We could not place your order. Please check your details and try again, or contact us on WhatsApp.'
+      );
       setSubmitting(false);
     }
   };
@@ -210,7 +272,10 @@ export default function Checkout() {
                   <img src={optimizeImage(l.image, 120)} alt="" className="w-14 h-14 rounded-lg object-cover bg-stone-100 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-stone-900 truncate">{l.name}</p>
-                    <p className="text-xs text-stone-500">Qty {l.quantity}</p>
+                    <p className="text-xs text-stone-500">
+                      Qty {l.quantity}
+                      {Object.entries(l.options || {}).map(([k, v]) => ` • ${k}: ${v}`).join('')}
+                    </p>
                     {l.problem && <p className="text-xs font-semibold text-red-600">{l.problem}</p>}
                   </div>
                   <p className="text-sm font-semibold text-stone-900">{formatPrice(l.price * l.quantity)}</p>
@@ -221,8 +286,40 @@ export default function Checkout() {
             <dl className="space-y-2 text-sm border-t border-stone-100 pt-4">
               <div className="flex justify-between"><dt className="text-stone-600">Subtotal</dt><dd>{formatPrice(subtotal)}</dd></div>
               <div className="flex justify-between"><dt className="text-stone-600">Shipping</dt><dd>{shipping === 0 ? 'Free' : formatPrice(shipping)}</dd></div>
+              {discount > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <dt className="flex items-center gap-1">
+                    Discount ({coupon.code})
+                    <button type="button" onClick={() => setCoupon(null)} aria-label="Remove coupon" className="p-0.5 hover:text-red-600"><X className="w-3.5 h-3.5" /></button>
+                  </dt>
+                  <dd>−{formatPrice(discount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between text-base font-bold border-t border-stone-100 pt-3 mt-3"><dt>Total</dt><dd className="text-[#5A5A40]">{formatPrice(total)}</dd></div>
             </dl>
+
+            {!coupon && (
+              <div className="mt-5">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <input
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === 'Enter' && applyCoupon(e)}
+                      placeholder="Coupon code"
+                      aria-label="Coupon code"
+                      maxLength={30}
+                      className="w-full pl-9 pr-3 py-2.5 border border-stone-200 rounded-xl text-sm uppercase focus:outline-none focus:ring-2 focus:ring-[#5A5A40]/30"
+                    />
+                  </div>
+                  <button type="button" onClick={applyCoupon} disabled={checkingCoupon} className="px-4 rounded-xl border border-stone-300 text-sm font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-60">
+                    {checkingCoupon ? '…' : 'Apply'}
+                  </button>
+                </div>
+                {couponMessage && <p className="text-xs text-red-600 mt-2">{couponMessage}</p>}
+              </div>
+            )}
 
             {error && (
               <div className="mt-5 flex gap-2 items-start rounded-xl bg-red-50 border border-red-100 p-3 text-sm text-red-700" role="alert">

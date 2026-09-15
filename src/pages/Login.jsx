@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { authErrorMessage, useAuth } from '../context/AuthContext';
+import useSeo from '../hooks/useSeo';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const { login, signup, resetPassword, user, loading } = useAuth();
+  useSeo({ title: isSignUp ? 'Create Account' : 'Login', noindex: true });
   const redirectTo = location.state?.from || '/account';
 
   useEffect(() => {

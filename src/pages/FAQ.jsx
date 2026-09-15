@@ -1,34 +1,36 @@
 import React, { useState } from 'react';
-
-const faqData = [
-  {
-    question: 'How long does delivery take?',
-    answer: 'Delivery usually takes 3–7 working days depending on your location.'
-  },
-  {
-    question: 'What payment methods do you accept?',
-    answer: 'Currently, we only offer Cash on Delivery (COD). You can pay in cash when your order is delivered to your doorstep.'
-  },
-  {
-    question: 'Can I return or exchange a product?',
-    answer: 'Yes, you can request a return or exchange within 7 days of delivery, provided the item is unused and in original packaging.'
-  },
-  {
-    question: 'Do you offer handmade or custom products?',
-    answer: 'Yes! Many of our home decor items are handcrafted. Custom orders may take additional time.'
-  },
-  {
-    question: 'How can I track my order?',
-    answer: 'Once your order is confirmed, our team will contact you and provide updates regarding delivery.'
-  },
-  {
-    question: 'Is Cash on Delivery available in all areas?',
-    answer: 'COD is available in most cities. However, availability may vary depending on your location.'
-  }
-];
+import { Link } from 'react-router-dom';
+import { useStore } from '../context/StoreContext';
+import { subscribeToNewsletter } from '../lib/db';
+import useSeo from '../hooks/useSeo';
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(0);
+  const { content } = useStore();
+  const faqData = content.faq;
+  const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState('');
+  useSeo({
+    title: 'Frequently Asked Questions',
+    description: 'Delivery times, payment methods (COD, JazzCash, EasyPaisa), returns and order tracking at Living Space Hub.',
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqData.map((f) => ({ '@type': 'Question', name: f.question, acceptedAnswer: { '@type': 'Answer', text: f.answer } })),
+    },
+  });
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    try {
+      const result = await subscribeToNewsletter(email);
+      setSubscribed(result === 'exists' ? "You're already subscribed — thank you!" : 'Thanks for subscribing!');
+      setEmail('');
+    } catch {
+      setSubscribed('Could not subscribe right now. Please try again.');
+    }
+  };
 
   const toggleAccordion = (index) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -84,9 +86,9 @@ const FAQ = () => {
             <p className="text-neutral-500 mb-8">
               Our support team is here to help you
             </p>
-            <button className="bg-[#5A5A40] hover:bg-[#4d4d37] text-white font-medium px-8 py-3 rounded-full transition-colors duration-300 tracking-wide uppercase text-sm">
+            <Link to="/contact" className="inline-block bg-[#5A5A40] hover:bg-[#4d4d37] text-white font-medium px-8 py-3 rounded-full transition-colors duration-300 tracking-wide uppercase text-sm">
               Contact Us
-            </button>
+            </Link>
 
           </div>
 
@@ -97,16 +99,21 @@ const FAQ = () => {
             <p className="text-neutral-500 mb-8">
               Get updates & exclusive offers
             </p>
-            <div className="max-w-md mx-auto relative flex items-center">
+            <form onSubmit={handleSubscribe} className="max-w-md mx-auto relative flex items-center">
               <input
                 type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="w-full bg-[#f9f8f5] border-none rounded-full py-4 pl-6 pr-32 focus:outline-none focus:ring-1 focus:ring-[#5A5A40] text-sm"
+                aria-label="Email address"
+                className="w-full bg-white border border-stone-200 rounded-full py-4 pl-6 pr-32 focus:outline-none focus:ring-1 focus:ring-[#5A5A40] text-sm"
               />
-              <button className="absolute right-1 top-1 bottom-1 bg-[#5A5A40] hover:bg-[#4d4d37] text-white px-6 rounded-full text-sm font-medium transition-colors">
+              <button type="submit" className="absolute right-1 top-1 bottom-1 bg-[#5A5A40] hover:bg-[#4d4d37] text-white px-6 rounded-full text-sm font-medium transition-colors">
                 Subscribe
               </button>
-            </div>
+            </form>
+            {subscribed && <p className="text-sm text-stone-600 mt-3">{subscribed}</p>}
           </div>
 
         </div>

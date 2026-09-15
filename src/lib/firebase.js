@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { connectAuthEmulator, getAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
@@ -16,6 +17,17 @@ const firebaseConfig = {
 export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
 export const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
+
+// App Check proves requests come from this website (not a script), blocking bot spam once
+// enforcement is switched on in Firebase console → App Check.
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+if (app && recaptchaSiteKey && import.meta.env.VITE_USE_EMULATORS !== 'true') {
+  if (import.meta.env.DEV) {
+    // Prints a debug token in the console; register it in App Check → Manage debug tokens for local dev.
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+  initializeAppCheck(app, { provider: new ReCaptchaV3Provider(recaptchaSiteKey), isTokenAutoRefreshEnabled: true });
+}
 export const auth = app ? getAuth(app) : null;
 export const db = app
   ? initializeFirestore(app, {

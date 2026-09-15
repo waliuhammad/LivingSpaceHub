@@ -1,6 +1,8 @@
 import React from 'react';
+import useSeo from '../hooks/useSeo';
 
 const PrivacyPolicy = () => {
+  useSeo({ title: 'Privacy Policy', description: 'How Living Space Hub collects, uses and protects your personal information.' });
   return (
     <div className="bg-[#f9f8f5] min-h-screen flex flex-col font-sans text-neutral-900">
       <div className="bg-white pt-20 pb-16 text-center border-b border-gray-100">

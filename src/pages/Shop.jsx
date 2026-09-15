@@ -7,12 +7,19 @@ import { sortProducts } from '../lib/products';
 import { useStore } from '../context/StoreContext';
 import PageTransition, { itemVariants } from '../components/PageTransition';
 import { motion } from 'framer-motion';
+import useSeo from '../hooks/useSeo';
 
 const ITEMS_PER_PAGE = 24;
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { products, categories, loading, error } = useStore();
+  const categoryLabel = categories.find((c) => c.id === (searchParams.get('category') || ''))?.label;
+  useSeo({
+    title: categoryLabel ? `${categoryLabel} — Shop` : 'Shop Home Decor',
+    description: 'Explore handcrafted furniture, textiles and decorative accents for every room. Cash on Delivery, JazzCash and EasyPaisa accepted.',
+    path: categoryLabel ? `/shop?category=${searchParams.get('category')}` : '/shop',
+  });
   const CATEGORIES = useMemo(
     () => [{ id: 'all', label: 'All Products' }, ...categories.map((c) => ({ id: c.id, label: c.label }))],
     [categories]

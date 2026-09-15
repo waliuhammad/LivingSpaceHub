@@ -3,26 +3,18 @@ import { MapPin, Mail, Phone, CheckCircle2 } from 'lucide-react';
 import PageTransition, { itemVariants } from '../components/PageTransition';
 import { motion } from 'framer-motion';
 import { sendContactMessage } from '../lib/db';
-
-const CONTACT_ITEMS = [
-  {
-    Icon: MapPin,
-    title: 'Our Studio',
-    lines: ['First Floor Office No.04 Humayun Tower university road', 'Peshawar'],
-  },
-  {
-    Icon: Mail,
-    title: 'Email Us',
-    lines: ['info@livingspaceshub.com'],
-  },
-  {
-    Icon: Phone,
-    title: 'Call Us',
-    lines: ['03338131393'],
-  },
-];
+import { notifyContactMessage } from '../lib/api';
+import { useStore } from '../context/StoreContext';
+import useSeo from '../hooks/useSeo';
 
 export default function Contact() {
+  const { content } = useStore();
+  useSeo({ title: 'Contact Us', description: 'Questions about a piece or need design advice? Get in touch with the Living Space Hub team.' });
+  const CONTACT_ITEMS = [
+    { Icon: MapPin, title: 'Our Studio', lines: content.contact.addressLines },
+    { Icon: Mail, title: 'Email Us', lines: [content.contact.email] },
+    { Icon: Phone, title: 'Call Us', lines: [content.contact.phone] },
+  ];
   const [formData, setFormData] = useState({ fullName: '', email: '', subject: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
@@ -33,12 +25,13 @@ export default function Contact() {
     setError('');
     setSending(true);
     try {
-      await sendContactMessage({
+      const messageId = await sendContactMessage({
         name: formData.fullName,
         email: formData.email,
         subject: formData.subject,
         message: formData.message,
       });
+      notifyContactMessage(messageId); // email alert to the store (best-effort)
       setSubmitted(true);
     } catch (err) {
       console.error('Contact form failed', err);

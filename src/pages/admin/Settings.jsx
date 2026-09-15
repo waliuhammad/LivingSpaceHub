@@ -2,17 +2,30 @@ import React, { useEffect, useState } from 'react';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import ImageUploader from '../../components/admin/ImageUploader';
 import { fieldClass, labelClass } from '../../components/admin/Modal';
-import { saveSettings, subscribeSettings } from '../../lib/db';
+import { exportAllData, saveSettings, subscribeSettings } from '../../lib/db';
+import { deleteCloudinaryImages } from '../../lib/api';
 import { formatPrice } from '../../lib/format';
-import { Save, Image as ImageIcon, Truck, Check, Smartphone, Loader2 } from 'lucide-react';
+import { Save, Image as ImageIcon, Truck, Check, Smartphone, Loader2, DatabaseBackup } from 'lucide-react';
 
 export default function Settings() {
   const [settings, setSettings] = useState(null);
   const [saved, setSaved] = useState('');
   const [saving, setSaving] = useState('');
   const [error, setError] = useState('');
+  const [savedHeroId, setSavedHeroId] = useState(null);
+  const [backupState, setBackupState] = useState('');
 
-  useEffect(() => subscribeSettings(setSettings, (err) => setError(err.message)), []);
+  useEffect(
+    () =>
+      subscribeSettings(
+        (data) => {
+          setSettings(data);
+          setSavedHeroId((current) => (current === null ? data.heroImagePublicId || '' : current));
+        },
+        (err) => setError(err.message)
+      ),
+    []
+  );
 
   if (!settings) {
     return <p className="text-gray-400 text-center py-12">{error || 'Loading settings…'}</p>;
@@ -29,6 +42,31 @@ export default function Settings() {
       setError(err.code === 'permission-denied' ? 'Only administrators can change store settings.' : err.message);
     } finally {
       setSaving('');
+    }
+  };
+
+  // Save the hero image, then delete the previous one from Cloudinary
+  const saveHero = async (heroImage, heroImagePublicId) => {
+    await save('hero', { heroImage, heroImagePublicId });
+    if (savedHeroId && savedHeroId !== heroImagePublicId) deleteCloudinaryImages([savedHeroId]);
+    setSavedHeroId(heroImagePublicId);
+  };
+
+  const downloadBackup = async () => {
+    setBackupState('working');
+    setError('');
+    try {
+      const data = await exportAllData();
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `living-space-hub-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setBackupState('done');
+    } catch (err) {
+      setError(`Backup failed: ${err.message}`);
+      setBackupState('');
     }
   };
 
@@ -96,11 +134,11 @@ export default function Settings() {
           footer={
             <>
               {settings.heroImage && (
-                <button onClick={() => save('hero', { heroImage: '', heroImagePublicId: '' })} className="text-sm font-medium text-red-600 hover:underline mr-auto">
+                <button onClick={() => saveHero('', '')} className="text-sm font-medium text-red-600 hover:underline mr-auto">
                   Use default image
                 </button>
               )}
-              <SaveButton saving={saving} saved={saved} section="hero" label="Save Image" onClick={() => save('hero', { heroImage: settings.heroImage, heroImagePublicId: settings.heroImagePublicId })} />
+              <SaveButton saving={saving} saved={saved} section="hero" label="Save Image" onClick={() => saveHero(settings.heroImage, settings.heroImagePublicId)} />
             </>
           }
         >
@@ -111,6 +149,31 @@ export default function Settings() {
             value={settings.heroImage}
             onChange={({ url, publicId }) => setSettings((s) => ({ ...s, heroImage: url, heroImagePublicId: publicId }))}
           />
+        </Card>
+
+        {/* Backup */}
+        <Card
+          icon={DatabaseBackup}
+          tone="bg-amber-50 text-amber-600"
+          title="Backup"
+          footer={
+            <button
+              onClick={downloadBackup}
+              disabled={backupState === 'working'}
+              className="bg-gray-900 text-white px-5 py-2.5 rounded-full font-medium text-sm flex items-center gap-2 hover:bg-black transition-colors disabled:opacity-60"
+            >
+              {backupState === 'working' ? <Loader2 size={16} className="animate-spin" /> : <DatabaseBackup size={16} />}
+              {backupState === 'working' ? 'Preparing…' : 'Download Backup'}
+            </button>
+          }
+        >
+          <p className="text-sm text-gray-600">
+            Downloads everything in the database — products, categories, orders, customers, messages, coupons, reviews and settings — as one JSON file.
+          </p>
+          <p className="text-xs text-gray-500">
+            Keep it somewhere safe (it contains customer details). Do this weekly. To restore, run <code className="bg-gray-100 px-1 rounded">npm run restore -- backup.json</code> on the computer that has the project.
+          </p>
+          {backupState === 'done' && <p className="text-xs text-emerald-700">Backup downloaded.</p>}
         </Card>
       </div>
 

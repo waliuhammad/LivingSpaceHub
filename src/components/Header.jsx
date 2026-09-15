@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Heart, Menu, X } from 'lucide-react';
 import { FaBagShopping } from 'react-icons/fa6';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useWishlist } from '../context/WishlistContext';
 
 const baseNavLinks = [
   { label: 'Home', to: '/' },
@@ -18,6 +19,7 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const { count } = useCart();
   const { user } = useAuth();
+  const { count: wishlistCount } = useWishlist();
   const navLinks = [...baseNavLinks, user ? { label: 'Account', to: '/account' } : { label: 'Login', to: '/login' }];
   const location = useLocation();
   const isHome = location.pathname === '/';
@@ -85,11 +87,25 @@ export default function Header() {
               </NavLink>
             ))}
 
+            <Link
+              to="/wishlist"
+              aria-label={`Wishlist (${wishlistCount})`}
+              className="relative text-stone-900 hover:text-rose-500 transition-colors p-1 ml-3 sm:ml-5 lg:ml-7"
+              id="header-wishlist"
+            >
+              <Heart className="w-5 h-5" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                  {wishlistCount > 99 ? '99+' : wishlistCount}
+                </span>
+              )}
+            </Link>
+
             {/* FaBagShopping Icon with Badge */}
             <Link
               to="/cart"
               aria-label="Cart"
-              className="relative text-stone-900 hover:text-[#5A5A40] transition-colors p-1 ml-3 sm:ml-5 lg:ml-7"
+              className="relative text-stone-900 hover:text-[#5A5A40] transition-colors p-1 ml-4"
               id="header-cart"
             >
               <FaBagShopping className="w-5 h-5" />
@@ -103,6 +119,14 @@ export default function Header() {
 
           {/* Mobile Right Actions */}
           <div className="flex md:hidden items-center gap-4">
+            <Link to="/wishlist" className="relative text-stone-900 p-1" aria-label="Wishlist">
+              <Heart className="w-5 h-5" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                  {wishlistCount > 99 ? '99+' : wishlistCount}
+                </span>
+              )}
+            </Link>
             <Link to="/cart" className="relative text-stone-900 p-1" id="header-cart-mobile">
               <FaBagShopping className="w-5 h-5" />
               {count > 0 && (

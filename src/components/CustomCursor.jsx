@@ -6,8 +6,9 @@ export default function CustomCursor() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Disable on touch devices
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return;
+    // Only on devices whose main input is a precise, hovering pointer (a mouse or trackpad).
+    // Touchscreen laptops still qualify; phones and tablets don't.
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
     let mouseX = -200;
     let mouseY = -200;
@@ -66,7 +67,7 @@ export default function CustomCursor() {
         ring.style.borderColor = 'rgba(90,90,64,0.8)'; // Primary color
         ring.style.backgroundColor = 'transparent';
         ring.style.opacity = '1';
-        ring.style.boxShadow = 'none';
+        ring.style.boxShadow = '0 0 0 1px rgba(255,255,255,0.55)';
         dot.style.width = '4px';
         dot.style.height = '4px';
         dot.style.backgroundColor = '#5A5A40';
@@ -84,6 +85,7 @@ export default function CustomCursor() {
     const onMouseLeave = () => setIsVisible(false);
     const onMouseEnter = () => setIsVisible(true);
 
+    document.documentElement.classList.add('custom-cursor-active');
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mouseup', onMouseUp);
@@ -100,6 +102,7 @@ export default function CustomCursor() {
     render();
 
     return () => {
+      document.documentElement.classList.remove('custom-cursor-active');
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mouseup', onMouseUp);
@@ -122,6 +125,7 @@ export default function CustomCursor() {
           height: '26px',
           borderRadius: '50%',
           border: '1.5px solid rgba(90,90,64,0.8)',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.55)',
           backgroundColor: 'transparent',
           pointerEvents: 'none',
           zIndex: 99999,
@@ -142,6 +146,7 @@ export default function CustomCursor() {
           height: '4px',
           borderRadius: '50%',
           backgroundColor: '#5A5A40',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.8)',
           pointerEvents: 'none',
           zIndex: 99999,
           opacity: isVisible ? 1 : 0,

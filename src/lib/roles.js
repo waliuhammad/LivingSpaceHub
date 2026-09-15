@@ -13,7 +13,12 @@ export const can = {
   manageCatalog: (role) => role === 'admin' || role === 'manager',
   manageOrders: (role) => STAFF_ROLES.includes(role),
   viewTransactions: (role) => role === 'admin' || role === 'manager',
+  viewCustomers: (role) => role === 'admin' || role === 'manager',
+  blockCustomers: (role) => role === 'admin',
+  manageCoupons: (role) => role === 'admin' || role === 'manager',
+  moderateReviews: (role) => STAFF_ROLES.includes(role),
   manageSettings: (role) => role === 'admin',
+  manageContent: (role) => role === 'admin',
   manageTeam: (role) => role === 'admin',
   deleteOrders: (role) => role === 'admin',
 };

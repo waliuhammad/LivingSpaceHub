@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail } from 'lucide-react';
+import { useStore } from '../context/StoreContext';
 
 const socialLinks = [
   {
+    key: 'instagram',
     label: 'Instagram',
     svg: (
       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -12,6 +14,7 @@ const socialLinks = [
     ),
   },
   {
+    key: 'pinterest',
     label: 'Pinterest',
     svg: (
       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -20,6 +23,7 @@ const socialLinks = [
     ),
   },
   {
+    key: 'facebook',
     label: 'Facebook',
     svg: (
       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -28,6 +32,7 @@ const socialLinks = [
     ),
   },
   {
+    key: 'twitter',
     label: 'Twitter',
     svg: (
       <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -38,6 +43,9 @@ const socialLinks = [
 ];
 
 export default function Footer() {
+  const { content } = useStore();
+  const { contact, social } = content;
+  const socials = socialLinks.filter(({ key }) => social[key]);
   return (
     <footer
       style={{
@@ -84,13 +92,15 @@ export default function Footer() {
                 maxWidth: '280px',
               }}
             >
-              Curating the world's most beautiful home decor and lifestyle pieces to help you create a space that reflects your soul.
+              {content.footerTagline}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              {socialLinks.map(({ svg, label }) => (
+              {socials.map(({ key, svg, label }) => (
                 <a
                   key={label}
-                  href="#"
+                  href={social[key]}
+                  target="_blank"
+                  rel="noreferrer"
                   aria-label={label}
                   style={{
                     width: '40px',
@@ -180,6 +190,7 @@ export default function Footer() {
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {[
                 { label: 'FAQs', to: '/faq' },
+                { label: 'Track Order', to: '/track-order' },
                 { label: 'Privacy Policy', to: '/privacy' },
               ].map(({ label, to }) => (
                 <li key={label} style={{ marginBottom: '0.6rem' }}>
@@ -222,29 +233,34 @@ export default function Footer() {
               <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.85rem' }}>
                 <MapPin style={{ width: '16px', height: '16px', color: '#D4A373', flexShrink: 0, marginTop: '4px' }} />
                 <span style={{ fontSize: '14px', lineHeight: '26px', color: '#a8a8a8' }}>
-                  1st Floor Office No.04 Humayun Tower<br />university road<br />Peshawar, Pakistan
+                  {contact.addressLines.map((line, i) => (
+                    <React.Fragment key={i}>
+                      {i > 0 && <br />}
+                      {line}
+                    </React.Fragment>
+                  ))}
                 </span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                 <Phone style={{ width: '16px', height: '16px', color: '#D4A373', flexShrink: 0 }} />
                 <a
-                  href="tel:03338131393"
+                  href={`tel:${contact.phone.replace(/\s/g, '')}`}
                   style={{ fontSize: '14px', lineHeight: '26px', color: '#a8a8a8', textDecoration: 'none', transition: 'color 0.2s' }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = '#a8a8a8')}
                 >
-                  03338131393
+                  {contact.phone}
                 </a>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <Mail style={{ width: '16px', height: '16px', color: '#D4A373', flexShrink: 0 }} />
                 <a
-                  href="mailto:info@livingspaceshub.com"
+                  href={`mailto:${contact.email}`}
                   style={{ fontSize: '14px', lineHeight: '26px', color: '#a8a8a8', textDecoration: 'none', transition: 'color 0.2s' }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = '#a8a8a8')}
                 >
-                  info@livingspaceshub.com
+                  {contact.email}
                 </a>
               </li>
             </ul>
@@ -274,7 +290,7 @@ export default function Footer() {
             padding: '0px 12px',
           }}
         >
-          <p style={{ margin: 0 }}>© 2026 Living Space Hub. All rights reserved.</p>
+          <p style={{ margin: 0 }}>© {new Date().getFullYear()} Living Space Hub. All rights reserved.</p>
         </div>
 
       </div>

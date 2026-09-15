@@ -2,13 +2,30 @@ import React, { useMemo, useState } from 'react';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import Modal, { fieldClass, labelClass, primaryBtn, secondaryBtn } from '../../components/admin/Modal';
 import ImageUploader from '../../components/admin/ImageUploader';
+import GalleryUploader from '../../components/admin/GalleryUploader';
 import useLiveQuery from '../../hooks/useLiveQuery';
-import { deleteProduct, saveProduct, subscribeCategories, subscribeProducts } from '../../lib/db';
+import { deleteProduct, productImageIds, saveProduct, subscribeCategories, subscribeProducts } from '../../lib/db';
+import { deleteCloudinaryImages } from '../../lib/api';
 import { optimizeImage } from '../../lib/cloudinary';
 import { formatPrice } from '../../lib/format';
 import { Search, Plus, Edit2, Trash2, Star, EyeOff, DownloadCloud, Loader2 } from 'lucide-react';
 
-const EMPTY_PRODUCT = { name: '', price: '', category: '', description: '', image: '', imagePublicId: '', stock: 0, featured: false, active: true };
+const EMPTY_PRODUCT = {
+  name: '',
+  price: '',
+  category: '',
+  description: '',
+  image: '',
+  imagePublicId: '',
+  images: [],
+  options: [],
+  details: [],
+  shippingInfo: '',
+  careInfo: '',
+  stock: 0,
+  featured: false,
+  active: true,
+};
 
 export default function Products() {
   const { data: products, loading, error } = useLiveQuery(subscribeProducts);
@@ -30,6 +47,7 @@ export default function Products() {
     if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
     try {
       await deleteProduct(product.id);
+      deleteCloudinaryImages(productImageIds(product));
     } catch (err) {
       window.alert(`Could not delete product: ${err.message}`);
     }
@@ -192,11 +210,29 @@ export default function Products() {
 }
 
 function ProductForm({ initial, categories, onClose }) {
-  const [form, setForm] = useState({ ...EMPTY_PRODUCT, ...initial });
+  const [form, setForm] = useState({
+    ...EMPTY_PRODUCT,
+    ...initial,
+    images: initial.images || [],
+    options: (initial.options || []).map((o) => ({ name: o.name, values: o.values.join(', ') })),
+    details: initial.details || [],
+  });
+  const [uploaded, setUploaded] = useState([]); // public ids uploaded in this session
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+  const trackUpload = (publicId) => publicId && setUploaded((list) => [...list, publicId]);
+
+  const setOption = (index, key, value) =>
+    setForm((f) => ({ ...f, options: f.options.map((o, i) => (i === index ? { ...o, [key]: value } : o)) }));
+
+  // Close without saving: remove images uploaded in this session that the saved product doesn't use
+  const handleCancel = () => {
+    const keep = new Set(productImageIds(initial));
+    deleteCloudinaryImages(uploaded.filter((id) => !keep.has(id)));
+    onClose();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -207,7 +243,13 @@ function ProductForm({ initial, categories, onClose }) {
     }
     setSaving(true);
     try {
-      await saveProduct(initial.id || null, form);
+      await saveProduct(initial.id || null, {
+        ...form,
+        options: form.options.map((o) => ({ name: o.name, values: o.values.split(',') })),
+      });
+      // Delete Cloudinary images that are no longer used (replaced or removed, including this session's discarded uploads)
+      const used = new Set([form.imagePublicId, ...form.images.map((i) => i.publicId)].filter(Boolean));
+      deleteCloudinaryImages([...productImageIds(initial), ...uploaded].filter((id) => !used.has(id)));
       onClose();
     } catch (err) {
       setError(err.code === 'permission-denied' ? 'You do not have permission to edit products.' : err.message);
@@ -218,11 +260,11 @@ function ProductForm({ initial, categories, onClose }) {
   return (
     <Modal
       title={initial.id ? 'Edit Product' : 'New Product'}
-      onClose={onClose}
+      onClose={handleCancel}
       wide
       footer={
         <>
-          <button type="button" onClick={onClose} className={secondaryBtn}>Cancel</button>
+          <button type="button" onClick={handleCancel} className={secondaryBtn}>Cancel</button>
           <button type="submit" form="product-form" disabled={saving} className={primaryBtn}>
             {saving && <Loader2 size={16} className="animate-spin" />}
             {saving ? 'Saving…' : 'Save Product'}
@@ -257,8 +299,28 @@ function ProductForm({ initial, categories, onClose }) {
           </div>
           <div>
             <label htmlFor="p-desc" className={labelClass}>Description</label>
-            <textarea id="p-desc" rows={5} maxLength={3000} value={form.description} onChange={set('description')} className={fieldClass} placeholder="Leave blank to use a default description for the category." />
+            <textarea id="p-desc" rows={4} maxLength={3000} value={form.description} onChange={set('description')} className={fieldClass} placeholder="Leave blank to use a default description for the category." />
           </div>
+
+          <fieldset className="space-y-2">
+            <legend className={labelClass}>Options (e.g. Colour, Size)</legend>
+            {form.options.map((option, index) => (
+              <div key={index} className="flex gap-2">
+                <input value={option.name} onChange={(e) => setOption(index, 'name', e.target.value)} placeholder="Colour" aria-label={`Option ${index + 1} name`} className={`${fieldClass} w-1/3`} maxLength={30} />
+                <input value={option.values} onChange={(e) => setOption(index, 'values', e.target.value)} placeholder="Oak, Walnut, White" aria-label={`Option ${index + 1} values`} className={fieldClass} />
+                <button type="button" onClick={() => setForm((f) => ({ ...f, options: f.options.filter((_, i) => i !== index) }))} className="px-2 text-gray-400 hover:text-red-600" aria-label="Remove option">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            {form.options.length < 4 && (
+              <button type="button" onClick={() => setForm((f) => ({ ...f, options: [...f.options, { name: '', values: '' }] }))} className="text-sm font-medium text-[#5A5A40] hover:underline">
+                + Add option
+              </button>
+            )}
+            <p className="text-xs text-gray-500">Separate values with commas. Customers must pick one of each. Stock is shared across options.</p>
+          </fieldset>
+
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={form.featured} onChange={set('featured')} className="accent-[#5A5A40]" />
             Featured (shown in Trending Products on the homepage)
@@ -268,14 +330,39 @@ function ProductForm({ initial, categories, onClose }) {
             Visible in the shop
           </label>
         </div>
-        <div>
+
+        <div className="space-y-5">
           <ImageUploader
-            label="Product Image"
+            label="Main Image"
             folder="products"
             value={form.image}
-            onChange={({ url, publicId }) => setForm((f) => ({ ...f, image: url, imagePublicId: publicId }))}
+            onChange={({ url, publicId }) => {
+              setForm((f) => ({ ...f, image: url, imagePublicId: publicId }));
+              trackUpload(publicId);
+            }}
           />
-          {error && <p className="text-sm text-red-600 mt-4" role="alert">{error}</p>}
+          <GalleryUploader images={form.images} onChange={(images) => setForm((f) => ({ ...f, images }))} onUploaded={trackUpload} />
+
+          <details className="rounded-xl border border-gray-200 p-4" open={Boolean(form.details.length || form.shippingInfo || form.careInfo)}>
+            <summary className="text-sm font-bold text-gray-700 cursor-pointer">Product page tabs (optional)</summary>
+            <p className="text-xs text-gray-500 mt-1 mb-3">Leave blank to use the store-wide text from Admin → Content.</p>
+            <div className="space-y-3">
+              <div>
+                <label htmlFor="p-details" className="block text-xs font-semibold text-gray-600 mb-1">Product details (one per line)</label>
+                <textarea id="p-details" rows={3} value={form.details.join('\n')} onChange={(e) => setForm((f) => ({ ...f, details: e.target.value.split('\n') }))} className={fieldClass} />
+              </div>
+              <div>
+                <label htmlFor="p-shipping" className="block text-xs font-semibold text-gray-600 mb-1">Shipping &amp; returns</label>
+                <textarea id="p-shipping" rows={2} maxLength={1000} value={form.shippingInfo} onChange={set('shippingInfo')} className={fieldClass} />
+              </div>
+              <div>
+                <label htmlFor="p-care" className="block text-xs font-semibold text-gray-600 mb-1">Care &amp; maintenance</label>
+                <textarea id="p-care" rows={2} maxLength={1000} value={form.careInfo} onChange={set('careInfo')} className={fieldClass} />
+              </div>
+            </div>
+          </details>
+
+          {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
         </div>
       </form>
     </Modal>

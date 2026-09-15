@@ -38,3 +38,11 @@ firestore-debug.log
 
 # Hostinger upload bundle
 *.zip
+
+# Private server config & local backups
+server-config/config.php
+server-config/service-account.json
+backups/
+# Generated at build time
+public/sitemap.xml
+public/robots.txt

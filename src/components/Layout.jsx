@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
-import CustomCursor from './CustomCursor';
 import ScrollToTop from './ScrollToTop';
 import { AnimatePresence } from 'framer-motion';
 import PageLoader from './PageLoader';
@@ -12,7 +11,6 @@ export default function Layout() {
   
   return (
     <div className="flex flex-col min-h-screen">
-      <CustomCursor />
       <ScrollToTop />
       <Header />
       <AnimatePresence mode="wait">

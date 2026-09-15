@@ -18,16 +18,23 @@
     color: var(--text-dark);
     line-height: 1.6;
     overflow-x: hidden;
-    cursor: none;
-  }
-
-  a, button, [role="button"], input, select, textarea {
-    cursor: none;
   }
 
   h1, h2, h3, h4, h5, h6, .font-serif {
     font-family: 'Playfair Display', serif;
   }
+}
+
+/* The native pointer is hidden only while <CustomCursor> is active (mouse devices), so touchscreens
+   and any page without the custom cursor keep a visible pointer. Kept outside @layer so it also
+   beats Tailwind's cursor-pointer utilities (no double cursor on buttons). */
+html.custom-cursor-active body,
+html.custom-cursor-active a,
+html.custom-cursor-active button,
+html.custom-cursor-active [role="button"],
+html.custom-cursor-active label,
+html.custom-cursor-active select {
+  cursor: none;
 }
 
 /* Glassmorphism Utilities */

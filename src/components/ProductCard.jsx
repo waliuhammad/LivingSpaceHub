@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Eye, Heart, CheckCircle2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { formatPrice, isInStock } from '../lib/products';
 import { optimizeImage } from '../lib/cloudinary';
 
@@ -10,7 +11,9 @@ export default function ProductCard({ product }) {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
+  const wishlist = useWishlist();
+  const isLiked = wishlist.has(product.id);
+  const hasOptions = (product.options || []).length > 0;
 
   const inStock = isInStock(product);
 
@@ -18,16 +21,21 @@ export default function ProductCard({ product }) {
     e.preventDefault();
     e.stopPropagation();
     if (!inStock) return;
+    // Products with options (colour, size…) must be configured on their own page
+    if (hasOptions) {
+      navigate(`/product/${product.id}`);
+      return;
+    }
     addItem(product);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2000);
-  }, [addItem, product, inStock]);
+  }, [addItem, product, inStock, hasOptions, navigate]);
 
   const handleToggleLike = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsLiked((prev) => !prev);
-  }, []);
+    wishlist.toggle(product.id).catch((err) => console.error('Wishlist update failed', err));
+  }, [wishlist, product.id]);
 
   const fallbackImg = `https://placehold.co/500x500/F5F2ED/5A5A40?text=${encodeURIComponent(product.name.slice(0, 15))}`;
 
@@ -49,7 +57,7 @@ export default function ProductCard({ product }) {
             onClick={handleAdd}
             disabled={!inStock}
             className="disabled:opacity-40 w-11 h-11 rounded-full bg-white text-stone-800 hover:bg-[#5A5A40] hover:text-white flex items-center justify-center shadow-lg transition-all duration-200 transform hover:scale-110"
-            title={inStock ? 'Add to Cart' : 'Out of stock'}
+            title={!inStock ? 'Out of stock' : hasOptions ? 'Choose options' : 'Add to Cart'}
           >
             <ShoppingBag className="w-5 h-5" />
           </button>
@@ -72,7 +80,8 @@ export default function ProductCard({ product }) {
                 ? 'bg-rose-500 text-white'
                 : 'bg-white text-stone-800 hover:bg-rose-500 hover:text-white'
             }`}
-            title="Add to Wishlist"
+            title={isLiked ? 'Remove from Wishlist' : 'Add to Wishlist'}
+            aria-pressed={isLiked}
           >
             <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
           </button>

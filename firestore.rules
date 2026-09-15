@@ -2,7 +2,8 @@ rules_version = '2';
 
 // Living Space Hub — Firestore security rules.
 // The site runs on the free Spark plan with no server code, so these rules are the
-// backend's only line of defence. Deploy with: npm run firebase:rules
+// backend's main line of defence. Deploy with: npm run firebase:rules
+// Tests: npm run test:rules
 //
 // Roles live in users/{uid}.role: 'customer' | 'support' | 'manager' | 'admin'.
 // Keep the role helpers in sync with src/lib/roles.js.
@@ -16,10 +17,17 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userDoc() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
     function role() {
-      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-        : 'guest';
+      return signedIn() && exists(userDoc()) ? get(userDoc()).data.role : 'guest';
+    }
+
+    // Blocked customers can still browse, but cannot place orders or write reviews while signed in.
+    function notBlocked() {
+      return !signedIn() || !exists(userDoc()) || get(userDoc()).data.get('blocked', false) != true;
     }
 
     function isStaff()   { return role() in ['admin', 'manager', 'support']; }
@@ -39,7 +47,38 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if true;
       allow create, update: if isCatalog() && validProduct(request.resource.data);
+      // Stock-only changes: staff processing orders, or a customer's own order being placed / cancelled.
+      allow update: if changedOnly(['stock', 'updatedAt', 'stockOrderId'])
+        && request.resource.data.stock is int && request.resource.data.stock >= 0
+        && (isStaff() || stockTakenByNewOrder(productId) || stockReturnedByCancel(productId));
       allow delete: if isCatalog();
+
+      function stockOrderPath() {
+        return /databases/$(database)/documents/orders/$(request.resource.data.stockOrderId);
+      }
+
+      // Placing an order: stock drops by exactly the ordered quantity, in the same write that creates the order.
+      function stockTakenByNewOrder(productId) {
+        let order = getAfter(stockOrderPath()).data;
+        return order.createdAt == request.time
+          && order.stockDeducted == true
+          && productId in order.stockLines
+          && order.stockLines[productId] is int && order.stockLines[productId] > 0
+          && resource.data.stock - request.resource.data.stock == order.stockLines[productId];
+      }
+
+      // A customer cancelling their own order puts back exactly what that order took.
+      function stockReturnedByCancel(productId) {
+        let before = get(stockOrderPath()).data;
+        let after = getAfter(stockOrderPath()).data;
+        return signedIn() && before.userId == request.auth.uid
+          && before.stockDeducted == true
+          && after.stockDeducted == false
+          && after.status == 'Cancelled'
+          && productId in before.stockLines
+          && before.stockLines[productId] is int && before.stockLines[productId] > 0
+          && request.resource.data.stock - resource.data.stock == before.stockLines[productId];
+      }
 
       function validProduct(d) {
         return d.keys().hasAll(['name', 'price', 'category', 'stock', 'active'])
@@ -47,8 +86,34 @@ service cloud.firestore {
           && d.price is number && d.price >= 0
           && str(d.category, 1, 40)
           && d.stock is int && d.stock >= 0
-          && d.active is bool;
+          && d.active is bool
+          && (!('images' in d) || (d.images is list && d.images.size() <= 8))
+          && (!('options' in d) || (d.options is list && d.options.size() <= 4));
       }
+
+      // One review per signed-in, email-verified customer (review id = their uid).
+      match /reviews/{uid} {
+        allow create, update: if signedIn() && request.auth.uid == uid
+          && request.auth.token.email_verified == true
+          && notBlocked()
+          && validReview(request.resource.data, productId);
+        allow delete: if (signedIn() && request.auth.uid == uid) || isStaff();
+      }
+    }
+
+    // Public read of reviews, including the admin's collection-group moderation list.
+    match /{path=**}/reviews/{reviewId} {
+      allow read: if true;
+    }
+
+    function validReview(d, productId) {
+      return d.keys().hasOnly(['rating', 'comment', 'name', 'productId', 'productName', 'createdAt', 'updatedAt'])
+        && d.rating is int && d.rating >= 1 && d.rating <= 5
+        && str(d.comment, 0, 1000)
+        && str(d.name, 1, 100)
+        && d.productId == productId
+        && str(d.productName, 0, 200)
+        && d.updatedAt == request.time;
     }
 
     match /categories/{slug} {
@@ -61,17 +126,51 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Editable page content (FAQ, About, contact details, footer, product tab defaults)
+    match /content/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    /* ───────────── coupons ───────────── */
+
+    match /coupons/{code} {
+      // Customers look a code up by name; they can't list all codes.
+      allow get: if true;
+      allow list: if isStaff();
+      allow create, update: if isCatalog()
+        && request.resource.data.code == code
+        && code.matches('^[A-Z0-9_-]{3,30}$')
+        && request.resource.data.type in ['percent', 'fixed']
+        && request.resource.data.value is number && request.resource.data.value > 0
+        && (request.resource.data.type != 'percent' || request.resource.data.value <= 100)
+        && request.resource.data.minSubtotal is number && request.resource.data.minSubtotal >= 0
+        && request.resource.data.active is bool;
+      allow delete: if isCatalog();
+    }
+
     /* ───────────── orders ───────────── */
 
     match /orders/{orderId} {
       // Guests and signed-in customers can place orders. Customers can read their own.
-      allow create: if validOrder(request.resource.data);
+      allow create: if notBlocked() && validOrder(request.resource.data);
       allow read: if isStaff() || (signedIn() && resource.data.userId == request.auth.uid);
-      allow update: if isStaff() && changedOnly(['status', 'payment', 'updatedAt'])
-        && request.resource.data.status in ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled']
-        && request.resource.data.payment.method == resource.data.payment.method
-        && request.resource.data.payment.reference == resource.data.payment.reference
-        && request.resource.data.payment.status in ['Pending', 'Paid', 'Failed', 'Refunded'];
+
+      allow update: if (
+          isStaff() && changedOnly(['status', 'payment', 'updatedAt', 'stockDeducted'])
+          && request.resource.data.status in ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled']
+          && request.resource.data.payment.method == resource.data.payment.method
+          && request.resource.data.payment.reference == resource.data.payment.reference
+          && request.resource.data.payment.status in ['Pending', 'Paid', 'Failed', 'Refunded']
+        ) || (
+          // Customers may cancel their own order while it is still Pending (stock is returned in the same write).
+          signedIn() && resource.data.userId == request.auth.uid
+          && resource.data.status == 'Pending'
+          && request.resource.data.status == 'Cancelled'
+          && request.resource.data.get('stockDeducted', false) == false
+          && changedOnly(['status', 'updatedAt', 'stockDeducted'])
+        );
+
       allow delete: if isAdmin();
 
       // Mirrors calcShipping() in src/lib/db.js. No settings doc yet means free shipping.
@@ -83,9 +182,22 @@ service cloud.firestore {
         return (threshold > 0 && subtotal >= threshold) ? 0 : fee;
       }
 
+      // Mirrors calcDiscount() in src/lib/db.js.
+      function validDiscount(d) {
+        let path = /databases/$(database)/documents/coupons/$(d.couponCode);
+        let c = get(path).data;
+        return d.couponCode == '' ? d.discount == 0 : (
+          exists(path)
+          && c.active == true
+          && (c.get('expiresAt', null) == null || c.expiresAt > request.time)
+          && d.subtotal >= c.minSubtotal
+          && d.discount == (c.type == 'percent' ? math.floor(d.subtotal * c.value / 100) : math.min(c.value, d.subtotal))
+        );
+      }
+
       function validOrder(d) {
-        return d.keys().hasOnly(['orderNumber', 'customer', 'notes', 'items', 'subtotal', 'shipping', 'total', 'payment', 'status', 'userId', 'createdAt', 'updatedAt'])
-          && d.keys().hasAll(['orderNumber', 'customer', 'notes', 'items', 'subtotal', 'shipping', 'total', 'payment', 'status', 'userId', 'createdAt', 'updatedAt'])
+        let keys = ['orderNumber', 'customer', 'notes', 'items', 'stockLines', 'subtotal', 'shipping', 'discount', 'couponCode', 'total', 'payment', 'status', 'userId', 'stockDeducted', 'createdAt', 'updatedAt'];
+        return d.keys().hasOnly(keys) && d.keys().hasAll(keys)
           && str(d.orderNumber, 8, 40)
           && d.customer.keys().hasOnly(['name', 'email', 'phone', 'address', 'city'])
           && str(d.customer.name, 1, 100)
@@ -95,10 +207,15 @@ service cloud.firestore {
           && str(d.customer.city, 1, 60)
           && str(d.notes, 0, 500)
           && d.items is list && d.items.size() > 0 && d.items.size() <= 50
+          && d.stockLines is map && d.stockLines.size() > 0 && d.stockLines.size() <= 50
           && d.subtotal is number && d.subtotal > 0
           && d.shipping == expectedShipping(d.subtotal)
-          && d.total == d.subtotal + d.shipping
+          && str(d.couponCode, 0, 30)
+          && d.discount is number && d.discount >= 0
+          && (d.couponCode == '' ? d.discount == 0 : validDiscount(d))
+          && d.total == d.subtotal + d.shipping - d.discount
           && d.status == 'Pending'
+          && d.stockDeducted == true
           && d.payment.keys().hasOnly(['method', 'status', 'reference'])
           && d.payment.method in ['cod', 'jazzcash', 'easypaisa']
           && d.payment.status == 'Pending'
@@ -107,6 +224,49 @@ service cloud.firestore {
           && (d.userId == null || (signedIn() && d.userId == request.auth.uid))
           && d.createdAt == request.time
           && d.updatedAt == request.time;
+      }
+    }
+
+    /* ───────────── public order tracking ───────────── */
+
+    // Document id = "<orderNumber>_<last 4 digits of the phone>", so knowing both is the
+    // "password". It holds no name, address or phone — only status information.
+    match /orderTracking/{trackingId} {
+      allow get: if true;
+      allow list: if isStaff();
+
+      allow create: if request.resource.data.keys().hasOnly(['orderNumber', 'orderId', 'status', 'paymentStatus', 'paymentMethod', 'total', 'itemCount', 'city', 'createdAt', 'updatedAt'])
+        && trackingMatchesOrder(trackingId, request.resource.data)
+        && request.resource.data.status == 'Pending'
+        && request.resource.data.paymentStatus == 'Pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if (
+          isStaff() && changedOnly(['status', 'paymentStatus', 'updatedAt'])
+        ) || (
+          signedIn() && resource.data.status == 'Pending'
+          && request.resource.data.status == 'Cancelled'
+          && changedOnly(['status', 'updatedAt'])
+          && getAfter(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.userId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.status == 'Cancelled'
+        );
+
+      allow delete: if isAdmin();
+
+      // The tracking doc must be written in the same batch as its order and agree with it.
+      function trackingMatchesOrder(trackingId, t) {
+        let order = getAfter(/databases/$(database)/documents/orders/$(t.orderId)).data;
+        let digits = order.customer.phone.replace('[^0-9]', '');
+        let parts = trackingId.split('_');
+        return parts.size() == 2
+          && parts[0] == order.orderNumber
+          && t.orderNumber == order.orderNumber
+          && parts[1].matches('^[0-9]{4}$')
+          && digits.matches('.*' + parts[1] + '$')
+          && t.total == order.total
+          && t.paymentMethod == order.payment.method
+          && t.city == order.customer.city;
       }
     }
 
@@ -140,22 +300,26 @@ service cloud.firestore {
 
       // Everyone signs up as a customer. Staff roles are granted by an admin (or scripts/make-admin.mjs).
       allow create: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'role', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'role', 'wishlist', 'createdAt'])
         && request.resource.data.role == 'customer'
         && request.resource.data.email == request.auth.token.email
         && str(request.resource.data.name, 1, 100)
+        && (!('wishlist' in request.resource.data) || request.resource.data.wishlist is list)
         && request.resource.data.createdAt == request.time;
 
       allow update: if (
           signedIn() && request.auth.uid == uid
-          && changedOnly(['name', 'phone'])
+          && changedOnly(['name', 'phone', 'wishlist'])
           && str(request.resource.data.name, 1, 100)
           && str(request.resource.data.phone, 0, 20)
+          && request.resource.data.get('wishlist', []) is list
+          && request.resource.data.get('wishlist', []).size() <= 200
         ) || (
-          // Admins change other people's roles, never their own (prevents locking yourself out).
+          // Admins change other people's role / blocked flag, never their own (prevents locking yourself out).
           isAdmin() && request.auth.uid != uid
-          && changedOnly(['role'])
+          && changedOnly(['role', 'blocked'])
           && request.resource.data.role in ['customer', 'support', 'manager', 'admin']
+          && request.resource.data.get('blocked', false) is bool
         );
 
       allow delete: if false;

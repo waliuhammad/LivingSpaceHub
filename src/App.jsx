@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import PageLoader from './components/PageLoader';
+import CustomCursor from './components/CustomCursor';
 
 // Admin imports
 import ProtectedRoute from './components/ProtectedRoute';
@@ -23,6 +24,8 @@ const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const OrderConfirmation = lazy(() => import('./pages/OrderConfirmation'));
 const Account = lazy(() => import('./pages/Account'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
+const TrackOrder = lazy(() => import('./pages/TrackOrder'));
 
 const Overview = lazy(() => import('./pages/admin/Overview'));
 const Products = lazy(() => import('./pages/admin/Products'));
@@ -32,10 +35,15 @@ const Transactions = lazy(() => import('./pages/admin/Transactions'));
 const Settings = lazy(() => import('./pages/admin/Settings'));
 const Messages = lazy(() => import('./pages/admin/Messages'));
 const Team = lazy(() => import('./pages/admin/Team'));
+const Customers = lazy(() => import('./pages/admin/Customers'));
+const Coupons = lazy(() => import('./pages/admin/Coupons'));
+const Reviews = lazy(() => import('./pages/admin/Reviews'));
+const Content = lazy(() => import('./pages/admin/Content'));
 
 export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
+      <CustomCursor />
       <Routes>
         {/* Standalone Authentication pages (No Navbar & No Footer) */}
         <Route path="/login" element={<Login />} />
@@ -53,6 +61,10 @@ export default function App() {
             <Route path="settings" element={<RequireRole allow={can.manageSettings}><Settings /></RequireRole>} />
             <Route path="messages" element={<Messages />} />
             <Route path="team" element={<RequireRole allow={can.manageTeam}><Team /></RequireRole>} />
+            <Route path="customers" element={<RequireRole allow={can.viewCustomers}><Customers /></RequireRole>} />
+            <Route path="coupons" element={<RequireRole allow={can.manageCoupons}><Coupons /></RequireRole>} />
+            <Route path="reviews" element={<RequireRole allow={can.moderateReviews}><Reviews /></RequireRole>} />
+            <Route path="content" element={<RequireRole allow={can.manageContent}><Content /></RequireRole>} />
           </Route>
         </Route>
 
@@ -67,6 +79,8 @@ export default function App() {
           <Route path="checkout" element={<Checkout />} />
           <Route path="order-confirmation" element={<OrderConfirmation />} />
           <Route path="account" element={<Account />} />
+          <Route path="wishlist" element={<Wishlist />} />
+          <Route path="track-order" element={<TrackOrder />} />
           <Route path="faq" element={<FAQ />} />
           <Route path="privacy" element={<PrivacyPolicy />} />
           <Route path="admin-login" element={<AdminLogin />} />

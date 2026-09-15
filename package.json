@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/generate-sitemap.mjs && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "deploy": "npm run build && node scripts/deploy.mjs",
     "firebase:rules": "firebase deploy --only firestore:rules,firestore:indexes",
     "make-admin": "node scripts/make-admin.mjs",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-living-space-hub \"node --test tests/firestore.rules.test.mjs\""
+    "test:rules": "firebase emulators:exec --only firestore --project demo-living-space-hub \"node --test tests/firestore.rules.test.mjs\"",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

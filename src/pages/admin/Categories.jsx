@@ -5,6 +5,7 @@ import ImageUploader from '../../components/admin/ImageUploader';
 import useLiveQuery from '../../hooks/useLiveQuery';
 import { deleteCategory, saveCategory, slugify, subscribeCategories, subscribeProducts } from '../../lib/db';
 import { optimizeImage } from '../../lib/cloudinary';
+import { deleteCloudinaryImages } from '../../lib/api';
 import { Plus, Tag, Trash2, Edit2, Loader2 } from 'lucide-react';
 
 export default function Categories() {
@@ -23,6 +24,7 @@ export default function Categories() {
     if (!window.confirm(`Delete the "${cat.label}" category?`)) return;
     try {
       await deleteCategory(cat.id);
+      deleteCloudinaryImages([cat.imagePublicId]);
     } catch (err) {
       window.alert(`Could not delete category: ${err.message}`);
     }
@@ -82,6 +84,12 @@ export default function Categories() {
 function CategoryForm({ initial, existingIds, onClose }) {
   const isNew = !initial.id;
   const [form, setForm] = useState(initial);
+  const [uploaded, setUploaded] = useState([]);
+
+  const handleCancel = () => {
+    deleteCloudinaryImages(uploaded.filter((id) => id !== initial.imagePublicId));
+    onClose();
+  };
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -101,6 +109,7 @@ function CategoryForm({ initial, existingIds, onClose }) {
     setSaving(true);
     try {
       await saveCategory(slug, form);
+      deleteCloudinaryImages([initial.imagePublicId, ...uploaded].filter((id) => id && id !== form.imagePublicId));
       onClose();
     } catch (err) {
       setError(err.message);
@@ -111,10 +120,10 @@ function CategoryForm({ initial, existingIds, onClose }) {
   return (
     <Modal
       title={isNew ? 'New Category' : 'Edit Category'}
-      onClose={onClose}
+      onClose={handleCancel}
       footer={
         <>
-          <button type="button" onClick={onClose} className={secondaryBtn}>Cancel</button>
+          <button type="button" onClick={handleCancel} className={secondaryBtn}>Cancel</button>
           <button type="submit" form="category-form" disabled={saving} className={primaryBtn}>
             {saving && <Loader2 size={16} className="animate-spin" />}
             {saving ? 'Saving…' : 'Save Category'}
@@ -141,7 +150,10 @@ function CategoryForm({ initial, existingIds, onClose }) {
           folder="categories"
           aspect="aspect-[4/5]"
           value={form.image}
-          onChange={({ url, publicId }) => setForm((f) => ({ ...f, image: url, imagePublicId: publicId }))}
+          onChange={({ url, publicId }) => {
+            setForm((f) => ({ ...f, image: url, imagePublicId: publicId }));
+            setUploaded((list) => [...list, publicId]);
+          }}
         />
         {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
       </form>

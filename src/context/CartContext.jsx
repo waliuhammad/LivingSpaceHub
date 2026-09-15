@@ -4,11 +4,21 @@ const CartContext = createContext(null);
 
 const STORAGE_KEY = 'lsh-cart';
 
+/** A cart line is a product plus its chosen options, e.g. "182::Colour=Oak|Size=Large". */
+function cartLineId(productId, options = {}) {
+  const key = Object.entries(options)
+    .map(([k, v]) => `${k}=${v}`)
+    .join('|');
+  return key ? `${productId}::${key}` : String(productId);
+}
+
 function loadCart() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    // Product ids are Firestore document ids (strings); older carts stored numbers.
-    return stored ? JSON.parse(stored).map((i) => ({ ...i, id: String(i.id) })) : [];
+    // Product ids are Firestore document ids (strings); older carts stored numbers and had no productId.
+    return stored
+      ? JSON.parse(stored).map((i) => ({ ...i, id: String(i.id), productId: String(i.productId || i.id), options: i.options || {} }))
+      : [];
   } catch {
     return [];
   }
@@ -21,8 +31,8 @@ export function CartProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
   }, [cart]);
 
-  const addItem = useCallback((product, quantity = 1) => {
-    const id = String(product.id);
+  const addItem = useCallback((product, quantity = 1, options = {}) => {
+    const id = cartLineId(product.id, options);
     setCart(prev => {
       const existing = prev.find(i => i.id === id);
       if (existing) {
@@ -34,6 +44,8 @@ export function CartProvider({ children }) {
         ...prev,
         {
           id,
+          productId: String(product.id),
+          options,
           name: product.name,
           price: product.price,
           currency: product.currency,

@@ -18,10 +18,11 @@ if (!isFirebaseConfigured) {
   );
 } else {
   // Imported lazily so a misconfigured build shows the message above instead of crashing.
-  const [{ AuthProvider }, { StoreProvider }, { CartProvider }, { default: App }] = await Promise.all([
+  const [{ AuthProvider }, { StoreProvider }, { CartProvider }, { WishlistProvider }, { default: App }] = await Promise.all([
     import('./context/AuthContext'),
     import('./context/StoreContext'),
     import('./context/CartContext'),
+    import('./context/WishlistContext'),
     import('./App.jsx'),
   ]);
 
@@ -30,9 +31,11 @@ if (!isFirebaseConfigured) {
       <BrowserRouter>
         <AuthProvider>
           <StoreProvider>
-            <CartProvider>
-              <App />
-            </CartProvider>
+            <WishlistProvider>
+              <CartProvider>
+                <App />
+              </CartProvider>
+            </WishlistProvider>
           </StoreProvider>
         </AuthProvider>
       </BrowserRouter>

@@ -9,11 +9,12 @@ import {
   ORDER_STATUSES,
   PAYMENT_METHODS,
   PAYMENT_STATUSES,
+  setOrderStatus,
   subscribeOrders,
   toDate,
-  updateOrderStatus,
   updatePaymentStatus,
 } from '../../lib/db';
+import { notifyOrderStatus } from '../../lib/api';
 import { formatPrice } from '../../lib/format';
 import { ChevronDown, ChevronUp, Package, MapPin, CreditCard, MessageCircle, Search, Trash2, Phone, Mail } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export default function Orders() {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [actionError, setActionError] = useState('');
+  const [notice, setNotice] = useState('');
 
   const statusCounts = useMemo(
     () => orders.reduce((acc, o) => ({ ...acc, [o.status]: (acc[o.status] || 0) + 1 }), {}),
@@ -55,6 +57,7 @@ export default function Orders() {
 
   const run = async (fn) => {
     setActionError('');
+    setNotice('');
     try {
       await fn();
     } catch (err) {
@@ -62,9 +65,18 @@ export default function Orders() {
     }
   };
 
+  const handleStatus = (order, status) =>
+    run(async () => {
+      const { stockChanged } = await setOrderStatus(order.id, status);
+      const stockNote = stockChanged === 'deducted' ? ' Stock was reduced.' : stockChanged === 'restored' ? ' Stock was restored.' : '';
+      const emailNote = order.customer?.email && ['Confirmed', 'Shipped', 'Delivered', 'Cancelled'].includes(status) ? ' Customer email sent.' : '';
+      if (emailNote) notifyOrderStatus(order.id);
+      setNotice(`${order.orderNumber} marked ${status}.${stockNote}${emailNote}`);
+    });
+
   const handleDelete = (order) => {
     if (!window.confirm(`Permanently delete order ${order.orderNumber}?`)) return;
-    run(() => deleteOrder(order.id));
+    run(() => deleteOrder(order));
   };
 
   return (
@@ -101,6 +113,7 @@ export default function Orders() {
       </div>
 
       {actionError && <p className="mb-4 text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-4 py-2" role="alert">{actionError}</p>}
+      {notice && <p className="mb-4 text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2" role="status">{notice}</p>}
 
       <div className="space-y-4">
         {loading && <p className="text-center text-gray-400 py-12">Loading orders…</p>}
@@ -151,7 +164,13 @@ export default function Orders() {
                     <div className="space-y-3">
                       {order.items.map((item, idx) => (
                         <div key={idx} className="flex justify-between items-center text-sm gap-4">
-                          <span className="text-gray-900"><span className="text-gray-500 mr-2">{item.quantity}×</span>{item.name}</span>
+                          <span className="text-gray-900">
+                            <span className="text-gray-500 mr-2">{item.quantity}×</span>
+                            {item.name}
+                            {Object.entries(item.options || {}).map(([k, v]) => (
+                              <span key={k} className="text-gray-500"> • {k}: {v}</span>
+                            ))}
+                          </span>
                           <span className="font-medium text-gray-900 whitespace-nowrap">{formatPrice(item.price * item.quantity)}</span>
                         </div>
                       ))}
@@ -159,6 +178,9 @@ export default function Orders() {
                     <dl className="mt-4 pt-4 border-t border-gray-100 space-y-1 text-sm">
                       <div className="flex justify-between"><dt className="text-gray-500">Subtotal</dt><dd>{formatPrice(order.subtotal)}</dd></div>
                       <div className="flex justify-between"><dt className="text-gray-500">Shipping</dt><dd>{order.shipping ? formatPrice(order.shipping) : 'Free'}</dd></div>
+                      {order.discount > 0 && (
+                        <div className="flex justify-between text-emerald-700"><dt>Coupon {order.couponCode}</dt><dd>−{formatPrice(order.discount)}</dd></div>
+                      )}
                       <div className="flex justify-between font-bold"><dt>Total</dt><dd>{formatPrice(order.total)}</dd></div>
                     </dl>
                     {order.notes && (
@@ -172,7 +194,7 @@ export default function Orders() {
                         Order Status
                         <select
                           value={order.status}
-                          onChange={(e) => run(() => updateOrderStatus(order.id, e.target.value))}
+                          onChange={(e) => handleStatus(order, e.target.value)}
                           className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white normal-case tracking-normal font-medium text-gray-900"
                         >
                           {ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}
@@ -182,7 +204,7 @@ export default function Orders() {
                         Payment Status
                         <select
                           value={order.payment?.status}
-                          onChange={(e) => run(() => updatePaymentStatus(order.id, e.target.value))}
+                          onChange={(e) => run(() => updatePaymentStatus(order, e.target.value))}
                           className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white normal-case tracking-normal font-medium text-gray-900"
                         >
                           {PAYMENT_STATUSES.map((s) => <option key={s}>{s}</option>)}
@@ -211,7 +233,10 @@ export default function Orders() {
                             {order.payment?.reference && <p className="font-mono text-gray-900">TID: {order.payment.reference}</p>}
                           </div>
                         </div>
-                        <p className="text-xs text-gray-400 pt-2">{order.userId ? 'Registered customer' : 'Guest checkout'}</p>
+                        <p className="text-xs text-gray-400 pt-2">
+                          {order.userId ? 'Registered customer' : 'Guest checkout'} •{' '}
+                          {order.stockDeducted ? 'Stock taken from inventory' : order.status === 'Cancelled' ? 'Stock returned' : 'Stock not taken (older order — taken when you confirm)'}
+                        </p>
                       </div>
                     </div>
 

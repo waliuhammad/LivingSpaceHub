@@ -8,8 +8,10 @@ import OfferBanner from '../components/home/OfferBanner';
 import StatsCounter from '../components/home/StatsCounter';
 import Testimonials from '../components/home/Testimonials';
 import Newsletter from '../components/home/Newsletter';
+import useSeo from '../hooks/useSeo';
 
 export default function Home() {
+  useSeo({ path: '/' });
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);

@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authErrorMessage, useAuth } from '../context/AuthContext';
 import { Shield, Eye, EyeOff, AlertCircle, ArrowRight, Lock } from 'lucide-react';
+import useSeo from '../hooks/useSeo';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
   const { login, user, isStaff, loading } = useAuth();
+  useSeo({ title: 'Admin Portal', noindex: true });
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
